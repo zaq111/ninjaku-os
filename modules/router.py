@@ -2,6 +2,7 @@ NAME = "router"
 VERSION = "1.0"
 
 from lib.system import run
+from lib.settings import set
 
 DEFAULT = {
     "wan": "eth0",
@@ -104,8 +105,17 @@ def enable_router():
         "stderr": dhcp["stderr"],
     }
 
+    ok = all(v.get("ok", False) for v in results.values())
+    if ok:
+        set("router.enabled", "true")
+        set("router.wan", DEFAULT["wan"])
+        set("router.lan", DEFAULT["lan"])
+        set("router.lan_ip", DEFAULT["lan_ip"])
+        set("dhcp.enabled", "true")
+        set("firewall.enabled", "true")
+
     return {
-        "ok": all(v.get("ok", False) for v in results.values()),
+        "ok": ok,
         "results": results,
     }
 
