@@ -1,5 +1,5 @@
 NAME = "router"
-VERSION = "1.1"
+VERSION = "1.2"
 
 from lib.system import run
 from lib.settings import get, set
@@ -18,14 +18,22 @@ def current():
         "wan": cfg("router.wan"),
         "lan": cfg("router.lan"),
         "lan_ip": cfg("router.lan_ip"),
+        "enabled": get("router.enabled", "false"),
+        "state": get("router.state", "unknown"),
     }
+
+def service_active(name):
+    return run(["systemctl", "is-active", name])["stdout"]
 
 def status():
     c = current()
     return {
+        "state": c["state"],
+        "enabled": c["enabled"],
         "wan": c["wan"],
         "lan": c["lan"],
         "lan_ip": c["lan_ip"],
+        "dhcp": service_active("dnsmasq"),
         "interfaces": run(["ip", "-br", "addr"])["stdout"],
         "routes": run(["ip", "route"])["stdout"],
         "ip_forward": run(["cat", "/proc/sys/net/ipv4/ip_forward"])["stdout"],
@@ -50,11 +58,11 @@ def lan_up():
 
 def enable_forward():
     r = run(["sysctl", "-w", "net.ipv4.ip_forward=1"])
-    return {
-        "ok": r["ok"],
-        "stdout": r["stdout"],
-        "stderr": r["stderr"],
-    }
+    return {"ok": r["ok"], "stdout": r["stdout"], "stderr": r["stderr"]}
+
+def disable_forward():
+    r = run(["sysctl", "-w", "net.ipv4.ip_forward=0"])
+    return {"ok": r["ok"], "stdout": r["stdout"], "stderr": r["stderr"]}
 
 def nat_up():
     c = current()
@@ -87,21 +95,15 @@ table inet ninjaku {{
 """
     run(["nft", "delete", "table", "inet", "ninjaku"])
     r = run(["nft", "-f", "-"], input_text=ruleset)
-    return {
-        "ok": r["ok"],
-        "stdout": r["stdout"],
-        "stderr": r["stderr"],
-    }
+    return {"ok": r["ok"], "stdout": r["stdout"], "stderr": r["stderr"]}
 
 def nat_down():
     r = run(["nft", "delete", "table", "inet", "ninjaku"])
-    return {
-        "ok": r["ok"],
-        "stdout": r["stdout"],
-        "stderr": r["stderr"],
-    }
+    ok = r["ok"] or "No such file or directory" in r["stderr"]
+    return {"ok": ok, "stdout": r["stdout"], "stderr": r["stderr"]}
 
 def enable_router():
+    set("router.state", "restoring")
     results = {}
 
     results["lan_up"] = lan_up()
@@ -117,19 +119,39 @@ def enable_router():
 
     ok = all(v.get("ok", False) for v in results.values())
 
-    if ok:
-        c = current()
-        set("router.enabled", "true")
-        set("router.wan", c["wan"])
-        set("router.lan", c["lan"])
-        set("router.lan_ip", c["lan_ip"])
-        set("dhcp.enabled", "true")
-        set("firewall.enabled", "true")
+    c = current()
+    set("router.enabled", "true" if ok else "false")
+    set("router.state", "running" if ok else "error")
+    set("router.wan", c["wan"])
+    set("router.lan", c["lan"])
+    set("router.lan_ip", c["lan_ip"])
+    set("dhcp.enabled", "true" if ok else "false")
+    set("firewall.enabled", "true" if ok else "false")
 
-    return {
-        "ok": ok,
-        "results": results,
+    return {"ok": ok, "results": results}
+
+def disable_router():
+    set("router.state", "stopping")
+    results = {}
+
+    dhcp = run(["systemctl", "stop", "dnsmasq"])
+    results["dhcp_stop"] = {
+        "ok": dhcp["ok"],
+        "stdout": dhcp["stdout"],
+        "stderr": dhcp["stderr"],
     }
+
+    results["nat_down"] = nat_down()
+    results["forward_off"] = disable_forward()
+
+    ok = all(v.get("ok", False) for v in results.values())
+
+    set("router.enabled", "false")
+    set("router.state", "stopped" if ok else "error")
+    set("dhcp.enabled", "false")
+    set("firewall.enabled", "false")
+
+    return {"ok": ok, "results": results}
 
 def execute(command, **kwargs):
     if command == "status":
@@ -144,5 +166,7 @@ def execute(command, **kwargs):
         return nat_down()
     if command == "enable":
         return enable_router()
+    if command == "disable":
+        return disable_router()
 
     raise Exception(f"Unknown router command: {command}")
