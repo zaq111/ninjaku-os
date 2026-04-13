@@ -83,6 +83,16 @@ def cmd_policy(args=None):
         print(f"Priority  : {r.get('priority')}")
         return
 
+    if args and args[0] == "apply":
+        r = execute("policy", "apply")
+        print("Policy apply:", "OK" if r.get("ok") else "FAILED")
+        print(f"Blocked devices: {r.get('blocked_count', 0)}")
+        for dev in r.get("blocked", []):
+            print(f"  {dev.get('ip')} {dev.get('mac')} {dev.get('hostname')}")
+        if r.get("stderr"):
+            print(r.get("stderr"))
+        return
+
     r = execute("policy", "status")
     policies = r.get("policies", [])
 
@@ -377,7 +387,7 @@ def cmd_help():
     print("  ninjaku config [list|set]")
     print("  ninjaku devices [sync|set-alias|set-notes|set-profile]")
     print("  ninjaku profiles [add|delete]")
-    print("  ninjaku policy [set|resolve]")
+    print("  ninjaku policy [set|resolve|apply]")
     print("  ninjaku help")
 
 def main():

@@ -3,6 +3,7 @@ VERSION = "1.0"
 
 from lib.db import connect
 from lib.policy import resolve
+from lib.modules import execute as module_execute
 
 DEFAULT_POLICIES = {
     "default": {
@@ -115,5 +116,8 @@ def execute(command, **kwargs):
             mac=kwargs.get("mac"),
             profile=kwargs.get("profile")
         )
+
+    if command == "apply":
+        return module_execute("firewall", "apply-policy")
 
     raise Exception(f"Unknown policy command: {command}")
