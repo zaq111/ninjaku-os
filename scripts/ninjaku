@@ -37,6 +37,19 @@ def cmd_status_json():
 
 
 
+
+def cmd_network():
+    print_header()
+    n = execute("network", "status")
+    print("Interfaces:")
+    print(n.get("interfaces", ""))
+    print()
+    print("Routes:")
+    print(n.get("routes", ""))
+    print()
+    print("DNS:")
+    print(n.get("dns", ""))
+
 def cmd_modules():
     print_header()
     mods = load_modules()
@@ -68,6 +81,7 @@ def cmd_help():
     print("  ninjaku status --json")
     print("  ninjaku audit")
     print("  ninjaku modules")
+    print("  ninjaku network")
     print("  ninjaku help")
 
 def main():
@@ -90,6 +104,10 @@ def main():
 
     if args[0] == "modules":
         cmd_modules()
+        return
+
+    if args[0] == "network":
+        cmd_network()
         return
 
     print(f"Unknown command: {args[0]}")
