@@ -1,28 +1,40 @@
 NAME = "router"
-VERSION = "1.0"
+VERSION = "1.1"
 
 from lib.system import run
-from lib.settings import set
+from lib.settings import get, set
 
-DEFAULT = {
-    "wan": "eth0",
-    "lan": "eth1",
-    "lan_ip": "192.168.10.1/24",
+DEFAULTS = {
+    "router.wan": "eth0",
+    "router.lan": "eth1",
+    "router.lan_ip": "192.168.10.1/24",
 }
 
-def status():
+def cfg(key):
+    return get(key, DEFAULTS[key])
+
+def current():
     return {
-        "wan": DEFAULT["wan"],
-        "lan": DEFAULT["lan"],
-        "lan_ip": DEFAULT["lan_ip"],
+        "wan": cfg("router.wan"),
+        "lan": cfg("router.lan"),
+        "lan_ip": cfg("router.lan_ip"),
+    }
+
+def status():
+    c = current()
+    return {
+        "wan": c["wan"],
+        "lan": c["lan"],
+        "lan_ip": c["lan_ip"],
         "interfaces": run(["ip", "-br", "addr"])["stdout"],
         "routes": run(["ip", "route"])["stdout"],
         "ip_forward": run(["cat", "/proc/sys/net/ipv4/ip_forward"])["stdout"],
     }
 
 def lan_up():
-    lan = DEFAULT["lan"]
-    lan_ip = DEFAULT["lan_ip"]
+    c = current()
+    lan = c["lan"]
+    lan_ip = c["lan_ip"]
 
     run(["ip", "link", "set", lan, "up"])
     run(["ip", "addr", "flush", "dev", lan])
@@ -36,7 +48,6 @@ def lan_up():
         "stderr": ip_result["stderr"],
     }
 
-
 def enable_forward():
     r = run(["sysctl", "-w", "net.ipv4.ip_forward=1"])
     return {
@@ -46,8 +57,9 @@ def enable_forward():
     }
 
 def nat_up():
-    wan = DEFAULT["wan"]
-    lan = DEFAULT["lan"]
+    c = current()
+    wan = c["wan"]
+    lan = c["lan"]
 
     ruleset = f"""
 table inet ninjaku {{
@@ -89,7 +101,6 @@ def nat_down():
         "stderr": r["stderr"],
     }
 
-
 def enable_router():
     results = {}
 
@@ -97,7 +108,6 @@ def enable_router():
     results["forward_on"] = enable_forward()
     results["nat_up"] = nat_up()
 
-    # start DHCP via systemctl for now
     dhcp = run(["systemctl", "restart", "dnsmasq"])
     results["dhcp_restart"] = {
         "ok": dhcp["ok"],
@@ -106,11 +116,13 @@ def enable_router():
     }
 
     ok = all(v.get("ok", False) for v in results.values())
+
     if ok:
+        c = current()
         set("router.enabled", "true")
-        set("router.wan", DEFAULT["wan"])
-        set("router.lan", DEFAULT["lan"])
-        set("router.lan_ip", DEFAULT["lan_ip"])
+        set("router.wan", c["wan"])
+        set("router.lan", c["lan"])
+        set("router.lan_ip", c["lan_ip"])
         set("dhcp.enabled", "true")
         set("firewall.enabled", "true")
 
