@@ -1,0 +1,5 @@
+#!/usr/bin/env python3
+import sys, json
+sys.path.insert(0, "/opt/ninjaku")
+from core.system import system_status
+print(json.dumps(system_status(), indent=2))

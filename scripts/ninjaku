@@ -1,0 +1,63 @@
+#!/usr/bin/env python3
+import sys
+import json
+from pathlib import Path
+
+sys.path.insert(0, "/opt/ninjaku")
+
+from core.system import system_status
+
+VERSION = "1.0-alpha"
+
+def print_header():
+    print("Ninjaku OS Router")
+    print(f"Version: {VERSION}")
+    print()
+
+def cmd_status():
+    s = system_status()
+    print_header()
+    print(f"Hostname : {s.get('hostname','')}")
+    print(f"Kernel   : {s.get('kernel','')}")
+    print(f"Uptime   : {s.get('uptime','')}")
+    print()
+    print("Interfaces:")
+    print(s.get("ip", ""))
+    print()
+    failed = s.get("failed_units", "").strip()
+    if failed:
+        print("Failed units:")
+        print(failed)
+    else:
+        print("Failed units: none")
+
+def cmd_status_json():
+    print(json.dumps(system_status(), indent=2))
+
+def cmd_help():
+    print_header()
+    print("Usage:")
+    print("  ninjaku status")
+    print("  ninjaku status --json")
+    print("  ninjaku help")
+
+def main():
+    args = sys.argv[1:]
+
+    if not args or args[0] in ("help", "-h", "--help"):
+        cmd_help()
+        return
+
+    if args[0] == "status":
+        if len(args) > 1 and args[1] == "--json":
+            cmd_status_json()
+        else:
+            cmd_status()
+        return
+
+    print(f"Unknown command: {args[0]}")
+    print("Run: ninjaku help")
+    sys.exit(1)
+
+if __name__ == "__main__":
+    main()
