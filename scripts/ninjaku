@@ -38,6 +38,17 @@ def cmd_status_json():
 
 
 
+
+def cmd_firewall():
+    print_header()
+    fw = execute("firewall", "status")
+    print(f"IPv4 Forward : {fw.get('ip_forward', '')}")
+    print(f"NFT OK       : {fw.get('nft_ok', '')}")
+    print()
+    print("Ruleset:")
+    rules = fw.get("nft_ruleset", "")
+    print(rules if rules else "(empty)")
+
 def cmd_network():
     print_header()
     n = execute("network", "status")
@@ -82,6 +93,7 @@ def cmd_help():
     print("  ninjaku audit")
     print("  ninjaku modules")
     print("  ninjaku network")
+    print("  ninjaku firewall")
     print("  ninjaku help")
 
 def main():
@@ -108,6 +120,10 @@ def main():
 
     if args[0] == "network":
         cmd_network()
+        return
+
+    if args[0] == "firewall":
+        cmd_firewall()
         return
 
     print(f"Unknown command: {args[0]}")
