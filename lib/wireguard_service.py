@@ -27,6 +27,7 @@ def ensure_tables():
                 public_key TEXT DEFAULT '',
                 dns TEXT DEFAULT '10.99.0.1',
                 mtu TEXT DEFAULT '1420',
+                endpoint TEXT DEFAULT '',
                 created_at DATETIME DEFAULT CURRENT_TIMESTAMP,
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
@@ -48,6 +49,10 @@ def ensure_tables():
                 updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
             )
         """)
+
+        cols = [r[1] for r in db.execute("PRAGMA table_info(wireguard)").fetchall()]
+        if "endpoint" not in cols:
+            db.execute("ALTER TABLE wireguard ADD COLUMN endpoint TEXT DEFAULT ''")
 
         db.execute("""
             INSERT OR IGNORE INTO wireguard
@@ -151,7 +156,7 @@ def status():
     with connect() as db:
         s = db.execute("""
             SELECT id, enabled, interface, listen_port, address,
-                   private_key, public_key, dns, mtu, created_at, updated_at
+                   private_key, public_key, dns, mtu, endpoint, created_at, updated_at
             FROM wireguard
             WHERE id='server'
         """).fetchone()
@@ -174,8 +179,9 @@ def status():
         "public_key": s[6],
         "dns": s[7],
         "mtu": s[8],
-        "created_at": s[9],
-        "updated_at": s[10],
+        "endpoint": s[9],
+        "created_at": s[10],
+        "updated_at": s[11],
     }
 
     peer_list = [{
@@ -213,6 +219,7 @@ def update_server(data):
         "public_key",
         "dns",
         "mtu",
+        "endpoint",
     }
 
     fields = []
@@ -328,7 +335,7 @@ def raw_server():
     ensure_tables()
     with connect() as db:
         return db.execute("""
-            SELECT interface, listen_port, address, private_key, dns, mtu
+            SELECT interface, listen_port, address, private_key, dns, mtu, endpoint
             FROM wireguard WHERE id='server'
         """).fetchone()
 
@@ -346,7 +353,7 @@ def generate_config_text():
     if not s:
         return {"ok": False, "error": "server config not found"}
 
-    interface, listen_port, address, private_key, dns, mtu = s
+    interface, listen_port, address, private_key, dns, mtu, endpoint = s
 
     if not private_key:
         return {"ok": False, "error": "server private key missing"}
@@ -510,7 +517,7 @@ def export_peer_config(peer_id, endpoint_host=""):
     if not p:
         return {"ok": False, "error": "peer not found"}
 
-    interface, listen_port, server_address, server_private, dns, mtu = s
+    interface, listen_port, server_address, server_private, dns, mtu, server_endpoint = s
     peer_id, name, enabled, peer_private, peer_public, psk, allowed_ips, endpoint, keepalive, desc = p
 
     server = status()["server"]
@@ -524,7 +531,9 @@ def export_peer_config(peer_id, endpoint_host=""):
         return {"ok": False, "error": "peer allowed IP missing"}
 
     if not endpoint_host:
-        endpoint_host = endpoint or ""
+        endpoint_host = endpoint or server_endpoint or ""
+    if not endpoint_host:
+        return {"ok": False, "error": "public endpoint is required"}
 
     endpoint_value = f"{endpoint_host}:{listen_port}" if ":" not in endpoint_host else endpoint_host
 

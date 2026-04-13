@@ -52,6 +52,7 @@ Pages.wireguard = {
           <div><label>Listen Port</label><input id="wg-port" value="${escapeHtml(s.listen_port || '51820')}"></div>
           <div><label>DNS</label><input id="wg-dns" value="${escapeHtml(s.dns || '10.99.0.1')}"></div>
           <div><label>MTU</label><input id="wg-mtu" value="${escapeHtml(s.mtu || '1420')}"></div>
+          <div><label>Public Endpoint</label><input id="wg-endpoint" value="${escapeHtml(s.endpoint || '')}" placeholder="vpn.example.com or public IP"></div>
         </div>
         <label class="inline-check" style="margin-top:14px">
           <input type="checkbox" id="wg-enabled" ${s.enabled ? 'checked' : ''}>
@@ -104,7 +105,8 @@ window.WireGuardActions = {
       address: document.getElementById('wg-address').value.trim(),
       listen_port: document.getElementById('wg-port').value.trim(),
       dns: document.getElementById('wg-dns').value.trim(),
-      mtu: document.getElementById('wg-mtu').value.trim()
+      mtu: document.getElementById('wg-mtu').value.trim(),
+      endpoint: document.getElementById('wg-endpoint').value.trim()
     });
 
     UI.toast('success', 'WireGuard saved', 'Server settings were saved.');
