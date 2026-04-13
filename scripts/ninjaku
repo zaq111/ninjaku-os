@@ -40,6 +40,34 @@ def cmd_status_json():
 
 
 
+
+def cmd_dhcp(subcmd="status"):
+    print_header()
+
+    if subcmd == "start":
+        r = execute("dhcp", "start")
+        print("DHCP start:", "OK" if r.get("ok") else "FAILED")
+        if r.get("stderr"):
+            print(r.get("stderr"))
+        return
+
+    if subcmd == "stop":
+        r = execute("dhcp", "stop")
+        print("DHCP stop:", "OK" if r.get("ok") else "FAILED")
+        if r.get("stderr"):
+            print(r.get("stderr"))
+        return
+
+    d = execute("dhcp", "status")
+    print(f"Service : {d.get('service')}")
+    print(f"Enabled : {d.get('enabled')}")
+    print()
+    print("Config:")
+    print(d.get("config") or "(missing)")
+    print()
+    print("Leases:")
+    print(d.get("leases") or "(empty)")
+
 def cmd_router(subcmd="status"):
     print_header()
 
@@ -157,6 +185,7 @@ def cmd_help():
     print("  ninjaku network")
     print("  ninjaku firewall [status|init|reset]")
     print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down]")
+    print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku help")
 
 def main():
@@ -193,6 +222,11 @@ def main():
     if args[0] == "router":
         subcmd = args[1] if len(args) > 1 else "status"
         cmd_router(subcmd)
+        return
+
+    if args[0] == "dhcp":
+        subcmd = args[1] if len(args) > 1 else "status"
+        cmd_dhcp(subcmd)
         return
 
     print(f"Unknown command: {args[0]}")
