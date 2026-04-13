@@ -16,4 +16,13 @@ def execute(command, **kwargs):
     if command == "delete-peer":
         return wireguard_service.delete_peer(kwargs.get("id", ""))
 
+    if command == "generate-server-keys":
+        return wireguard_service.generate_server_keys()
+
+    if command == "generate-peer-keys":
+        return wireguard_service.generate_peer_keys(
+            kwargs.get("id", ""),
+            kwargs.get("preshared", True)
+        )
+
     raise Exception(f"Unknown wireguard command: {command}")

@@ -1,51 +1,84 @@
 window.Pages = window.Pages || {};
 
+function shortKey(key) {
+  if (!key) return '-';
+  if (key.length <= 18) return key;
+  return key.slice(0, 8) + '...' + key.slice(-8);
+}
+
 Pages.wireguard = {
   title: 'WireGuard',
-  subtitle: 'VPN framework for remote access, peers and future site-to-site tunnels.',
+  subtitle: 'Remote access, peers and future site-to-site tunnels.',
 
   async render() {
     const data = await NinjakuAPI.get('/wireguard');
     const s = data.server || {};
     const peers = data.peers || [];
 
+    const serverKeyStatus = s.has_private_key && s.public_key;
+
     const peerRows = peers.map(p => `
       <tr>
-        <td><strong>${escapeHtml(p.name)}</strong><br><span class="muted">${escapeHtml(p.id)}</span></td>
-        <td>${UI.badge(p.enabled ? 'enabled' : 'disabled', p.enabled ? 'green' : 'orange')}</td>
+        <td>
+          <strong>${escapeHtml(p.name)}</strong><br>
+          <span class="muted">${escapeHtml(p.id)}</span>
+        </td>
+        <td>
+          ${UI.badge(p.has_private_key ? 'Generated' : 'Missing', p.has_private_key ? 'green' : 'orange')}
+        </td>
         <td>${escapeHtml(p.allowed_ips || '-')}</td>
         <td>${escapeHtml(p.endpoint || '-')}</td>
-        <td>${escapeHtml(p.persistent_keepalive || '-')}</td>
-        <td><button class="danger-button" onclick="WireGuardActions.deletePeer('${escapeHtml(p.id)}')">Delete</button></td>
+        <td>
+          <button class="soft-button" onclick="WireGuardActions.generatePeerKeys('${escapeHtml(p.id)}')">Generate</button>
+          <button class="soft-button" disabled>Export</button>
+          <button class="danger-button" onclick="WireGuardActions.deletePeer('${escapeHtml(p.id)}')">Delete</button>
+        </td>
       </tr>
     `).join('');
 
     return `
       <section class="grid grid-4" style="margin-bottom:18px">
-        ${UI.statCard({ icon: '◇', color: s.enabled ? 'green' : 'orange', label: 'WireGuard', value: s.enabled ? 'Enabled' : 'Disabled', sub: 'framework phase' })}
+        ${UI.statCard({ icon: '◇', color: serverKeyStatus ? 'green' : 'orange', label: 'WireGuard', value: serverKeyStatus ? 'Keys Ready' : 'Framework Ready', sub: data.running ? 'running' : 'not running' })}
         ${UI.statCard({ icon: '⇄', color: 'blue', label: 'Interface', value: s.interface || 'wg0', sub: s.address || '-' })}
         ${UI.statCard({ icon: '◉', color: 'purple', label: 'Port', value: s.listen_port || '51820', sub: 'listen port' })}
         ${UI.statCard({ icon: '▣', color: 'green', label: 'Peers', value: data.peer_count || 0, sub: 'configured peers' })}
       </section>
 
       ${UI.panel('Server', `
-        <div class="form-grid qos-form">
-          <input id="wg-interface" value="${escapeHtml(s.interface || 'wg0')}" placeholder="Interface">
-          <input id="wg-address" value="${escapeHtml(s.address || '10.99.0.1/24')}" placeholder="Address">
-          <input id="wg-port" value="${escapeHtml(s.listen_port || '51820')}" placeholder="Listen port">
-          <input id="wg-dns" value="${escapeHtml(s.dns || '10.99.0.1')}" placeholder="DNS">
-          <input id="wg-mtu" value="${escapeHtml(s.mtu || '1420')}" placeholder="MTU">
+        <div class="form-grid wg-server-grid">
+          <div><label>Interface</label><input id="wg-interface" value="${escapeHtml(s.interface || 'wg0')}"></div>
+          <div><label>Address</label><input id="wg-address" value="${escapeHtml(s.address || '10.99.0.1/24')}"></div>
+          <div><label>Listen Port</label><input id="wg-port" value="${escapeHtml(s.listen_port || '51820')}"></div>
+          <div><label>DNS</label><input id="wg-dns" value="${escapeHtml(s.dns || '10.99.0.1')}"></div>
+          <div><label>MTU</label><input id="wg-mtu" value="${escapeHtml(s.mtu || '1420')}"></div>
         </div>
         <label class="inline-check" style="margin-top:14px">
           <input type="checkbox" id="wg-enabled" ${s.enabled ? 'checked' : ''}>
           Enable WireGuard configuration
         </label>
-      `, `<button class="primary-button" onclick="WireGuardActions.saveServer()">Save Server</button>`)}
+      `, `
+        <button class="soft-button" onclick="WireGuardActions.generateServerKeys()">${serverKeyStatus ? 'Regenerate Keys' : 'Generate Keys'}</button>
+        <button class="primary-button" onclick="WireGuardActions.saveServer()">Save Server</button>
+      `)}
+
+      ${UI.panel('Server Keys', `
+        <div class="wg-key-box">
+          <div>
+            <span class="muted">Status</span>
+            <strong>${serverKeyStatus ? 'Generated' : 'Missing'}</strong>
+          </div>
+          <div>
+            <span class="muted">Public Key</span>
+            <strong>${escapeHtml(shortKey(s.public_key || ''))}</strong>
+          </div>
+          <button class="soft-button" ${s.public_key ? '' : 'disabled'} onclick="WireGuardActions.copy('${escapeHtml(s.public_key || '')}')">Copy</button>
+        </div>
+      `)}
 
       ${UI.panel('Peers', `
         <table class="table">
-          <thead><tr><th>Peer</th><th>Status</th><th>Allowed IPs</th><th>Endpoint</th><th>Keepalive</th><th>Action</th></tr></thead>
-          <tbody>${peerRows || '<tr><td colspan="6">No peers yet.</td></tr>'}</tbody>
+          <thead><tr><th>Peer</th><th>Keys</th><th>Allowed IPs</th><th>Endpoint</th><th>Actions</th></tr></thead>
+          <tbody>${peerRows || '<tr><td colspan="5">No peers yet.</td></tr>'}</tbody>
         </table>
       `, `<button class="primary-button" onclick="WireGuardActions.addPeer()">Add Peer</button>`)}
     `;
@@ -63,8 +96,26 @@ window.WireGuardActions = {
       mtu: document.getElementById('wg-mtu').value.trim()
     });
 
-    UI.toast('success', 'WireGuard saved', 'Server framework settings were saved.');
+    UI.toast('success', 'WireGuard saved', 'Server settings were saved.');
     await Ninjaku.navigate('wireguard');
+  },
+
+  async generateServerKeys() {
+    await NinjakuAPI.post('/wireguard/server/generate-keys');
+    UI.toast('success', 'Server keys generated', 'WireGuard server keys were updated.');
+    await Ninjaku.navigate('wireguard');
+  },
+
+  async generatePeerKeys(id) {
+    await NinjakuAPI.post('/wireguard/peers/' + encodeURIComponent(id) + '/generate-keys', { preshared: true });
+    UI.toast('success', 'Peer keys generated', 'WireGuard peer keys were updated.');
+    await Ninjaku.navigate('wireguard');
+  },
+
+  async copy(value) {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    UI.toast('success', 'Copied', 'Public key copied to clipboard.');
   },
 
   addPeer() {
@@ -87,14 +138,19 @@ window.WireGuardActions = {
               <label>Allowed IPs</label>
               <input id="wg-peer-allowed" placeholder="10.99.0.2/32">
 
-              <label>Public Key</label>
-              <input id="wg-peer-public" placeholder="Public key">
-
               <label>Endpoint</label>
               <input id="wg-peer-endpoint" placeholder="optional">
 
+              <label>Persistent Keepalive</label>
+              <input id="wg-peer-keepalive" value="25">
+
               <label>Description</label>
               <textarea id="wg-peer-description"></textarea>
+
+              <label class="inline-check">
+                <input type="checkbox" id="wg-peer-generate" checked>
+                Generate keys automatically
+              </label>
             </div>
           </div>
           <div class="modal-actions">
@@ -119,13 +175,17 @@ window.WireGuardActions = {
       return;
     }
 
-    await NinjakuAPI.post('/wireguard/peers', {
+    const result = await NinjakuAPI.post('/wireguard/peers', {
       name,
       allowed_ips: document.getElementById('wg-peer-allowed').value.trim(),
-      public_key: document.getElementById('wg-peer-public').value.trim(),
       endpoint: document.getElementById('wg-peer-endpoint').value.trim(),
+      persistent_keepalive: document.getElementById('wg-peer-keepalive').value.trim(),
       description: document.getElementById('wg-peer-description').value.trim()
     });
+
+    if (document.getElementById('wg-peer-generate').checked && result.peer?.id) {
+      await NinjakuAPI.post('/wireguard/peers/' + encodeURIComponent(result.peer.id) + '/generate-keys', { preshared: true });
+    }
 
     this.close();
     UI.toast('success', 'Peer saved', 'WireGuard peer was saved.');

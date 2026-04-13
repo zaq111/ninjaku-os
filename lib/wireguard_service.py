@@ -1,4 +1,6 @@
+import subprocess
 from lib.db import connect
+from lib.system import run
 
 DEFAULT_SERVER = {
     "id": "server",
@@ -62,6 +64,83 @@ def ensure_tables():
             DEFAULT_SERVER["dns"],
             DEFAULT_SERVER["mtu"],
         ))
+
+
+def wg_available():
+    return run(["sh", "-c", "command -v wg"])["ok"]
+
+def gen_private_key():
+    r = run(["wg", "genkey"])
+    if not r["ok"] or not r["stdout"]:
+        raise Exception(r["stderr"] or "wg genkey failed")
+    return r["stdout"].strip()
+
+def gen_public_key(private_key):
+    p = subprocess.run(
+        ["wg", "pubkey"],
+        input=(private_key + "\n").encode(),
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE,
+        timeout=10,
+    )
+    if p.returncode != 0 or not p.stdout:
+        raise Exception(p.stderr.decode(errors="ignore").strip() or "wg pubkey failed")
+    return p.stdout.decode().strip()
+
+def gen_preshared_key():
+    r = run(["wg", "genpsk"])
+    if not r["ok"] or not r["stdout"]:
+        raise Exception(r["stderr"] or "wg genpsk failed")
+    return r["stdout"].strip()
+
+def generate_server_keys():
+    ensure_tables()
+
+    if not wg_available():
+        return {"ok": False, "error": "wg command not found. Install wireguard-tools first."}
+
+    private_key = gen_private_key()
+    public_key = gen_public_key(private_key)
+
+    with connect() as db:
+        db.execute("""
+            UPDATE wireguard
+            SET private_key=?, public_key=?, updated_at=CURRENT_TIMESTAMP
+            WHERE id='server'
+        """, (private_key, public_key))
+
+    return {
+        "ok": True,
+        "server": status()["server"],
+    }
+
+def generate_peer_keys(peer_id, preshared=True):
+    ensure_tables()
+    peer_id = normalize_id(peer_id)
+
+    if not wg_available():
+        return {"ok": False, "error": "wg command not found. Install wireguard-tools first."}
+
+    peer = get_peer(peer_id)
+    if not peer:
+        return {"ok": False, "error": "peer not found", "id": peer_id}
+
+    private_key = gen_private_key()
+    public_key = gen_public_key(private_key)
+    preshared_key = gen_preshared_key() if preshared else ""
+
+    with connect() as db:
+        db.execute("""
+            UPDATE wireguard_peers
+            SET private_key=?, public_key=?, preshared_key=?, updated_at=CURRENT_TIMESTAMP
+            WHERE id=?
+        """, (private_key, public_key, preshared_key, peer_id))
+
+    return {
+        "ok": True,
+        "peer": get_peer(peer_id),
+    }
+
 
 def boolv(v):
     return str(v).lower() in ("1", "true", "yes", "on")
