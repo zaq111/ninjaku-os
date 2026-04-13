@@ -43,6 +43,28 @@ def cmd_status_json():
 
 
 
+
+def cmd_devices():
+    print_header()
+    d = execute("devices", "status")
+    devices = d.get("devices", [])
+
+    print(f"Devices: {d.get('count', 0)}")
+    print()
+
+    if not devices:
+        print("(empty)")
+        return
+
+    print(f"{'IP':<16} {'MAC':<18} {'HOSTNAME':<24} {'EXPIRES'}")
+    for dev in devices:
+        print(
+            f"{dev.get('ip',''):<16} "
+            f"{dev.get('mac',''):<18} "
+            f"{dev.get('hostname',''):<24} "
+            f"{dev.get('expires','')}"
+        )
+
 def cmd_config(args):
     print_header()
 
@@ -221,6 +243,7 @@ def cmd_help():
     print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down|enable]")
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku config [list|set]")
+    print("  ninjaku devices")
     print("  ninjaku help")
 
 def main():
@@ -266,6 +289,10 @@ def main():
 
     if args[0] == "config":
         cmd_config(args[1:])
+        return
+
+    if args[0] == "devices":
+        cmd_devices()
         return
 
     print(f"Unknown command: {args[0]}")
