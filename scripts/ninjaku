@@ -309,6 +309,16 @@ def cmd_firewall(subcmd="status"):
             print(r.get("stderr"))
         return
 
+    if subcmd == "apply-policy":
+        r = execute("firewall", "apply-policy")
+        print("Firewall apply policy:", "OK" if r.get("ok") else "FAILED")
+        print(f"Blocked devices: {r.get('blocked_count', 0)}")
+        for dev in r.get("blocked", []):
+            print(f"  {dev.get('ip')} {dev.get('mac')} {dev.get('hostname')}")
+        if r.get("stderr"):
+            print(r.get("stderr"))
+        return
+
     fw = execute("firewall", "status")
     print(f"IPv4 Forward : {fw.get('ip_forward', '')}")
     print(f"NFT OK       : {fw.get('nft_ok', '')}")
@@ -361,7 +371,7 @@ def cmd_help():
     print("  ninjaku audit")
     print("  ninjaku modules")
     print("  ninjaku network")
-    print("  ninjaku firewall [status|init|reset]")
+    print("  ninjaku firewall [status|init|reset|apply-policy]")
     print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down|enable|disable]")
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku config [list|set]")
