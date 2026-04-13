@@ -44,6 +44,16 @@ def cmd_status_json():
 
 
 
+
+def cmd_profiles():
+    print_header()
+    r = execute("profiles", "status")
+    profiles = r.get("profiles", [])
+
+    print("Profiles:")
+    for p in profiles:
+        print(f"  {p.get('name'):<10} {p.get('description')}")
+
 def cmd_devices(args=None):
     args = args or []
     print_header()
@@ -278,6 +288,7 @@ def cmd_help():
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku config [list|set]")
     print("  ninjaku devices [sync|set-alias|set-notes|set-profile]")
+    print("  ninjaku profiles")
     print("  ninjaku help")
 
 def main():
@@ -327,6 +338,10 @@ def main():
 
     if args[0] == "devices":
         cmd_devices(args[1:])
+        return
+
+    if args[0] == "profiles":
+        cmd_profiles()
         return
 
     print(f"Unknown command: {args[0]}")
