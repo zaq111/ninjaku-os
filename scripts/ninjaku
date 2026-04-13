@@ -46,6 +46,21 @@ def cmd_status_json():
 
 
 
+
+def cmd_api():
+    print_header()
+    r = execute("api", "status")
+    print(f"Service : {r.get('service')}")
+    print(f"Enabled : {r.get('enabled')}")
+    print()
+    print("Health:")
+    print(r.get("health", ""))
+    print()
+    print("Listen:")
+    for line in r.get("listen", "").splitlines():
+        if ":8181" in line:
+            print(line)
+
 def cmd_policy(args=None):
     args = args or []
     print_header()
@@ -408,6 +423,7 @@ def cmd_help():
     print("  ninjaku devices [sync|cleanup-wan|mark-offline|set-alias|set-notes|set-profile]")
     print("  ninjaku profiles [add|delete]")
     print("  ninjaku policy [set|resolve|apply]")
+    print("  ninjaku api")
     print("  ninjaku help")
 
 def main():
@@ -465,6 +481,10 @@ def main():
 
     if args[0] == "policy":
         cmd_policy(args[1:])
+        return
+
+    if args[0] == "api":
+        cmd_api()
         return
 
     print(f"Unknown command: {args[0]}")
