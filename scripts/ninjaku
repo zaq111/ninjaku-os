@@ -45,14 +45,39 @@ def cmd_status_json():
 
 
 
-def cmd_profiles():
+def cmd_profiles(args=None):
+    args = args or []
     print_header()
+
+    if args and args[0] == "add":
+        if len(args) < 2:
+            print("Usage: ninjaku profiles add <name> [description]")
+            return
+        name = args[1]
+        description = " ".join(args[2:]) if len(args) > 2 else ""
+        r = execute("profiles", "add", name=name, description=description)
+        print("Add profile:", "OK" if r.get("ok") else "FAILED")
+        if r.get("error"):
+            print(r.get("error"))
+        return
+
+    if args and args[0] in ("delete", "del", "remove"):
+        if len(args) < 2:
+            print("Usage: ninjaku profiles delete <name>")
+            return
+        r = execute("profiles", "delete", name=args[1])
+        print("Delete profile:", "OK" if r.get("ok") else "FAILED")
+        if r.get("error"):
+            print(r.get("error"))
+        return
+
     r = execute("profiles", "status")
     profiles = r.get("profiles", [])
 
     print("Profiles:")
     for p in profiles:
-        print(f"  {p.get('name'):<10} {p.get('description')}")
+        kind = "system" if p.get("is_system") else "custom"
+        print(f"  {p.get('name'):<12} {kind:<8} {p.get('description')}")
 
 def cmd_devices(args=None):
     args = args or []
@@ -288,7 +313,7 @@ def cmd_help():
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku config [list|set]")
     print("  ninjaku devices [sync|set-alias|set-notes|set-profile]")
-    print("  ninjaku profiles")
+    print("  ninjaku profiles [add|delete]")
     print("  ninjaku help")
 
 def main():
@@ -341,7 +366,7 @@ def main():
         return
 
     if args[0] == "profiles":
-        cmd_profiles()
+        cmd_profiles(args[1:])
         return
 
     print(f"Unknown command: {args[0]}")
