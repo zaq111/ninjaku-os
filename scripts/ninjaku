@@ -44,8 +44,28 @@ def cmd_status_json():
 
 
 
-def cmd_devices():
+def cmd_devices(args=None):
+    args = args or []
     print_header()
+
+    if args and args[0] == "sync":
+        r = execute("devices", "sync")
+        print("Devices sync:", "OK" if r.get("ok") else "FAILED")
+        print(f"Lease count : {r.get('count', 0)}")
+        return
+
+    if args and args[0] in ("set-alias", "set-notes", "set-profile"):
+        if len(args) < 3:
+            print(f"Usage: ninjaku devices {args[0]} <mac> <value>")
+            return
+        r = execute("devices", args[0], mac=args[1], value=" ".join(args[2:]))
+        print("Update:", "OK" if r.get("ok") else "FAILED")
+        if not r.get("ok"):
+            print(r.get("error", "unknown error"))
+        else:
+            print(f"{r.get('mac')} {r.get('field')} = {r.get('value')}")
+        return
+
     d = execute("devices", "status")
     devices = d.get("devices", [])
 
@@ -56,13 +76,15 @@ def cmd_devices():
         print("(empty)")
         return
 
-    print(f"{'IP':<16} {'MAC':<18} {'HOSTNAME':<24} {'EXPIRES'}")
+    print(f"{'IP':<16} {'MAC':<18} {'HOSTNAME':<18} {'ALIAS':<16} {'PROFILE':<10} {'SEEN'}")
     for dev in devices:
         print(
             f"{dev.get('ip',''):<16} "
             f"{dev.get('mac',''):<18} "
-            f"{dev.get('hostname',''):<24} "
-            f"{dev.get('expires','')}"
+            f"{dev.get('hostname',''):<18} "
+            f"{dev.get('alias',''):<16} "
+            f"{dev.get('profile',''):<10} "
+            f"{dev.get('seen_count','')}"
         )
 
 def cmd_config(args):
@@ -255,7 +277,7 @@ def cmd_help():
     print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down|enable|disable]")
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku config [list|set]")
-    print("  ninjaku devices")
+    print("  ninjaku devices [sync|set-alias|set-notes|set-profile]")
     print("  ninjaku help")
 
 def main():
@@ -304,7 +326,7 @@ def main():
         return
 
     if args[0] == "devices":
-        cmd_devices()
+        cmd_devices(args[1:])
         return
 
     print(f"Unknown command: {args[0]}")
