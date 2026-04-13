@@ -3,6 +3,7 @@ VERSION = "1.2"
 
 from pathlib import Path
 from lib.db import connect
+from lib.policy import resolve
 
 LEASE_FILE = Path("/var/lib/misc/dnsmasq.leases")
 
@@ -53,16 +54,24 @@ def list_devices():
         """)
         rows = cur.fetchall()
 
-    return [{
-        "mac": r[0],
-        "ip": r[1],
-        "hostname": r[2],
-        "alias": r[3],
-        "notes": r[4],
-        "profile": r[5],
-        "last_seen": r[6],
-        "seen_count": r[7],
-    } for r in rows]
+    devices = []
+    for r in rows:
+        mac = r[0]
+        effective_policy = resolve(mac=mac)
+        devices.append({
+            "mac": mac,
+            "ip": r[1],
+            "hostname": r[2],
+            "alias": r[3],
+            "notes": r[4],
+            "profile": r[5],
+            "policy_internet": effective_policy.get("internet"),
+            "policy_bandwidth": effective_policy.get("bandwidth"),
+            "policy_dns": effective_policy.get("dns_filter"),
+            "last_seen": r[6],
+            "seen_count": r[7],
+        })
+    return devices
 
 def update_device(mac, field, value):
     allowed = {"alias", "notes", "profile"}
