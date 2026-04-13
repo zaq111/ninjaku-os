@@ -16,6 +16,18 @@ CREATE TABLE IF NOT EXISTS audit_logs (
     action TEXT NOT NULL,
     detail TEXT DEFAULT ''
 );
+
+CREATE TABLE IF NOT EXISTS devices (
+    mac TEXT PRIMARY KEY,
+    ip TEXT DEFAULT '',
+    hostname TEXT DEFAULT '',
+    alias TEXT DEFAULT '',
+    notes TEXT DEFAULT '',
+    profile TEXT DEFAULT 'default',
+    first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
+    seen_count INTEGER DEFAULT 1
+);
 """
 
 def connect():
