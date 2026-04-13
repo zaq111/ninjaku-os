@@ -35,10 +35,69 @@ def lan_up():
         "stderr": ip_result["stderr"],
     }
 
+
+def enable_forward():
+    r = run(["sysctl", "-w", "net.ipv4.ip_forward=1"])
+    return {
+        "ok": r["ok"],
+        "stdout": r["stdout"],
+        "stderr": r["stderr"],
+    }
+
+def nat_up():
+    wan = DEFAULT["wan"]
+    lan = DEFAULT["lan"]
+
+    ruleset = f"""
+table inet ninjaku {{
+    chain input {{
+        type filter hook input priority 0; policy accept;
+        iif "lo" accept
+        ct state established,related accept
+    }}
+
+    chain forward {{
+        type filter hook forward priority 0; policy accept;
+        ct state established,related accept
+        iif "{lan}" oif "{wan}" accept
+    }}
+
+    chain output {{
+        type filter hook output priority 0; policy accept;
+    }}
+
+    chain postrouting {{
+        type nat hook postrouting priority srcnat; policy accept;
+        oif "{wan}" masquerade
+    }}
+}}
+"""
+    run(["nft", "delete", "table", "inet", "ninjaku"])
+    r = run(["nft", "-f", "-"], input_text=ruleset)
+    return {
+        "ok": r["ok"],
+        "stdout": r["stdout"],
+        "stderr": r["stderr"],
+    }
+
+def nat_down():
+    r = run(["nft", "delete", "table", "inet", "ninjaku"])
+    return {
+        "ok": r["ok"],
+        "stdout": r["stdout"],
+        "stderr": r["stderr"],
+    }
+
 def execute(command, **kwargs):
     if command == "status":
         return status()
     if command == "lan-up":
         return lan_up()
+    if command == "forward-on":
+        return enable_forward()
+    if command == "nat-up":
+        return nat_up()
+    if command == "nat-down":
+        return nat_down()
 
     raise Exception(f"Unknown router command: {command}")

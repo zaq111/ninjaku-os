@@ -52,6 +52,28 @@ def cmd_router(subcmd="status"):
             print(r.get("stderr"))
         return
 
+    if subcmd == "forward-on":
+        r = execute("router", "forward-on")
+        print("IP forward:", "OK" if r.get("ok") else "FAILED")
+        print(r.get("stdout", ""))
+        if r.get("stderr"):
+            print(r.get("stderr"))
+        return
+
+    if subcmd == "nat-up":
+        r = execute("router", "nat-up")
+        print("NAT up:", "OK" if r.get("ok") else "FAILED")
+        if r.get("stderr"):
+            print(r.get("stderr"))
+        return
+
+    if subcmd == "nat-down":
+        r = execute("router", "nat-down")
+        print("NAT down:", "OK" if r.get("ok") else "FAILED")
+        if r.get("stderr"):
+            print(r.get("stderr"))
+        return
+
     r = execute("router", "status")
     print(f"WAN        : {r.get('wan')}")
     print(f"LAN        : {r.get('lan')}")
@@ -134,7 +156,7 @@ def cmd_help():
     print("  ninjaku modules")
     print("  ninjaku network")
     print("  ninjaku firewall [status|init|reset]")
-    print("  ninjaku router [status|lan-up]")
+    print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down]")
     print("  ninjaku help")
 
 def main():
