@@ -67,17 +67,44 @@ def blocked_devices():
 def apply_policy():
     blocked = blocked_devices()
 
-    # Chain khusus policy. Kalau belum ada, router/nat-up harus dijalankan dulu.
-    run(["nft", "delete", "chain", "inet", "ninjaku", "policy_block"], timeout=5)
+    # Buat ulang seluruh ruleset router + policy supaya idempotent
+    # Ini mencegah rule dobel saat apply berkali-kali.
+    from lib.settings import get
 
-    rules = """
-add chain inet ninjaku policy_block
-add rule inet ninjaku forward jump policy_block
+    wan = get("router.wan", "eth0")
+    lan = get("router.lan", "eth1")
+
+    rules = f"""
+table inet ninjaku {{
+    chain input {{
+        type filter hook input priority 0; policy accept;
+        iif "lo" accept
+        ct state established,related accept
+    }}
+
+    chain forward {{
+        type filter hook forward priority 0; policy accept;
+        ct state established,related accept
 """
 
     for dev in blocked:
-        rules += f'add rule inet ninjaku policy_block ip saddr {dev["ip"]} drop\n'
+        rules += f'        ip saddr {dev["ip"]} drop\n'
 
+    rules += f"""        iif "{lan}" oif "{wan}" accept
+    }}
+
+    chain output {{
+        type filter hook output priority 0; policy accept;
+    }}
+
+    chain postrouting {{
+        type nat hook postrouting priority srcnat; policy accept;
+        oif "{wan}" masquerade
+    }}
+}}
+"""
+
+    run(["nft", "delete", "table", "inet", "ninjaku"], timeout=5)
     p = run(["nft", "-f", "-"], timeout=5, input_text=rules)
 
     return {
