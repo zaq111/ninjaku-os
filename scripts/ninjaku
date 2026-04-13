@@ -64,6 +64,25 @@ def cmd_policy(args=None):
             print(f"{r.get('profile')} {r.get('field')} = {r.get('value')}")
         return
 
+    if args and args[0] == "resolve":
+        if len(args) < 2:
+            print("Usage: ninjaku policy resolve <mac-or-profile>")
+            return
+
+        target = args[1]
+        if ":" in target:
+            r = execute("policy", "resolve", mac=target)
+        else:
+            r = execute("policy", "resolve", profile=target)
+
+        print(f"Profile   : {r.get('profile')}")
+        print(f"Internet  : {r.get('internet')}")
+        print(f"Bandwidth : {r.get('bandwidth')}")
+        print(f"DNS       : {r.get('dns_filter')}")
+        print(f"Schedule  : {r.get('schedule')}")
+        print(f"Priority  : {r.get('priority')}")
+        return
+
     r = execute("policy", "status")
     policies = r.get("policies", [])
 
@@ -347,7 +366,7 @@ def cmd_help():
     print("  ninjaku config [list|set]")
     print("  ninjaku devices [sync|set-alias|set-notes|set-profile]")
     print("  ninjaku profiles [add|delete]")
-    print("  ninjaku policy [set]")
+    print("  ninjaku policy [set|resolve]")
     print("  ninjaku help")
 
 def main():

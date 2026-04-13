@@ -2,6 +2,7 @@ NAME = "policy"
 VERSION = "1.0"
 
 from lib.db import connect
+from lib.policy import resolve
 
 DEFAULT_POLICIES = {
     "default": {
@@ -107,6 +108,12 @@ def execute(command, **kwargs):
             kwargs.get("profile", ""),
             kwargs.get("field", ""),
             kwargs.get("value", "")
+        )
+
+    if command == "resolve":
+        return resolve(
+            mac=kwargs.get("mac"),
+            profile=kwargs.get("profile")
         )
 
     raise Exception(f"Unknown policy command: {command}")
