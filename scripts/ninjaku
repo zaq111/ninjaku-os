@@ -5,7 +5,7 @@ from pathlib import Path
 
 sys.path.insert(0, "/opt/ninjaku")
 
-from core.system import system_status
+from lib.modules import execute
 from core.audit import list_logs
 
 VERSION = "1.0-alpha"
@@ -16,7 +16,7 @@ def print_header():
     print()
 
 def cmd_status():
-    s = system_status()
+    s = execute('system', 'status')
     print_header()
     print(f"Hostname : {s.get('hostname','')}")
     print(f"Kernel   : {s.get('kernel','')}")
@@ -33,7 +33,7 @@ def cmd_status():
         print("Failed units: none")
 
 def cmd_status_json():
-    print(json.dumps(system_status(), indent=2))
+    print(json.dumps(execute('system', 'status'), indent=2))
 
 
 def cmd_audit():
