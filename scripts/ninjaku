@@ -39,6 +39,21 @@ def cmd_status_json():
 
 
 
+
+def cmd_router():
+    print_header()
+    r = execute("router", "status")
+    print(f"WAN        : {r.get('wan')}")
+    print(f"LAN        : {r.get('lan')}")
+    print(f"LAN IP     : {r.get('lan_ip')}")
+    print(f"IP Forward : {r.get('ip_forward')}")
+    print()
+    print("Interfaces:")
+    print(r.get("interfaces", ""))
+    print()
+    print("Routes:")
+    print(r.get("routes", ""))
+
 def cmd_firewall(subcmd="status"):
     print_header()
 
@@ -109,6 +124,7 @@ def cmd_help():
     print("  ninjaku modules")
     print("  ninjaku network")
     print("  ninjaku firewall [status|init|reset]")
+    print("  ninjaku router")
     print("  ninjaku help")
 
 def main():
@@ -140,6 +156,10 @@ def main():
     if args[0] == "firewall":
         subcmd = args[1] if len(args) > 1 else "status"
         cmd_firewall(subcmd)
+        return
+
+    if args[0] == "router":
+        cmd_router()
         return
 
     print(f"Unknown command: {args[0]}")
