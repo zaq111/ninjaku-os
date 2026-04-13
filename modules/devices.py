@@ -4,6 +4,7 @@ VERSION = "1.2"
 from pathlib import Path
 from lib.db import connect
 from lib.policy import resolve
+from lib.modules import execute as module_execute
 
 LEASE_FILE = Path("/var/lib/misc/dnsmasq.leases")
 
@@ -88,7 +89,20 @@ def update_device(mac, field, value):
         """, (mac,))
         db.execute(f"UPDATE devices SET {field}=? WHERE mac=?", (value, mac))
 
-    return {"ok": True, "mac": mac, "field": field, "value": value}
+    apply_result = None
+    if field == "profile":
+        try:
+            apply_result = module_execute("policy", "apply")
+        except Exception as e:
+            apply_result = {"ok": False, "error": str(e)}
+
+    return {
+        "ok": True,
+        "mac": mac,
+        "field": field,
+        "value": value,
+        "policy_applied": apply_result,
+    }
 
 def status():
     sync()

@@ -161,6 +161,10 @@ def cmd_devices(args=None):
             print(r.get("error", "unknown error"))
         else:
             print(f"{r.get('mac')} {r.get('field')} = {r.get('value')}")
+            pa = r.get("policy_applied")
+            if pa is not None:
+                print("Policy apply:", "OK" if pa.get("ok") else "FAILED")
+                print(f"Blocked devices: {pa.get('blocked_count', 0)}")
         return
 
     d = execute("devices", "status")
