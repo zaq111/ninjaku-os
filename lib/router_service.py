@@ -22,6 +22,20 @@ def current():
 def service_active(name):
     return run(["systemctl", "is-active", name])["stdout"]
 
+
+def interface_exists(ifname):
+    r = run(["ip", "link", "show", ifname])
+    return r["ok"]
+
+def interface_state(ifname):
+    if not interface_exists(ifname):
+        return "missing"
+    out = run(["ip", "-br", "link", "show", ifname])["stdout"].strip()
+    if not out:
+        return "unknown"
+    parts = out.split()
+    return parts[1] if len(parts) > 1 else "unknown"
+
 def status():
     c = current()
     return {
@@ -31,6 +45,8 @@ def status():
         "lan": c["lan"],
         "lan_ip": c["lan_ip"],
         "dhcp": service_active("dnsmasq"),
+        "wan_state": interface_state(c["wan"]),
+        "lan_state": interface_state(c["lan"]),
         "interfaces": run(["ip", "-br", "addr"])["stdout"],
         "routes": run(["ip", "route"])["stdout"],
         "ip_forward": run(["cat", "/proc/sys/net/ipv4/ip_forward"])["stdout"],
@@ -40,6 +56,16 @@ def lan_up():
     c = current()
     lan = c["lan"]
     lan_ip = c["lan_ip"]
+
+    if not interface_exists(lan):
+        return {
+            "ok": False,
+            "lan": lan,
+            "lan_ip": lan_ip,
+            "stdout": "",
+            "stderr": f"LAN interface {lan} not found",
+            "state": "waiting_for_lan",
+        }
 
     run(["ip", "link", "set", lan, "up"])
     run(["ip", "addr", "flush", "dev", lan])
@@ -104,6 +130,14 @@ def enable_router():
     results = {}
 
     results["lan_up"] = lan_up()
+
+    if not results["lan_up"].get("ok"):
+        set("router.enabled", "true")
+        set("router.state", results["lan_up"].get("state", "waiting_for_lan"))
+        set("dhcp.enabled", "false")
+        set("firewall.enabled", "false")
+        return {"ok": False, "state": get("router.state", "waiting_for_lan"), "results": results}
+
     results["forward_on"] = enable_forward()
     results["nat_up"] = nat_up()
 
