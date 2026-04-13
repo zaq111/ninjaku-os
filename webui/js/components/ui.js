@@ -12,6 +12,7 @@ window.UI = {
       dhcp: '⇄',
       network: '☍',
       qos: '⚡',
+      vpn: '◇',
       healthy: '✓',
       uptime: '◷',
       cpu: '◉',

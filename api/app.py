@@ -20,6 +20,7 @@ from api.routes_dns_filter import dns_filter_bp, ENDPOINTS as DNS_FILTER_ENDPOIN
 from api.routes_adguard import adguard_bp, ENDPOINTS as ADGUARD_ENDPOINTS
 from api.routes_qos import qos_bp, ENDPOINTS as QOS_ENDPOINTS
 from api.routes_qos_pipes import qos_pipes_bp, ENDPOINTS as QOS_PIPES_ENDPOINTS
+from api.routes_wireguard import wireguard_bp, ENDPOINTS as WIREGUARD_ENDPOINTS
 
 app = Flask(__name__)
 
@@ -39,6 +40,7 @@ ALL_ENDPOINTS = (
     + ADGUARD_ENDPOINTS
     + QOS_ENDPOINTS
     + QOS_PIPES_ENDPOINTS
+    + WIREGUARD_ENDPOINTS
 )
 
 app.register_blueprint(system_bp)
@@ -56,6 +58,7 @@ app.register_blueprint(dns_filter_bp)
 app.register_blueprint(adguard_bp)
 app.register_blueprint(qos_bp)
 app.register_blueprint(qos_pipes_bp)
+app.register_blueprint(wireguard_bp)
 
 @app.get("/api/v1/endpoints")
 def api_full_endpoints():
