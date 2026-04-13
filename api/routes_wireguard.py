@@ -11,6 +11,7 @@ ENDPOINTS = [
     ("DELETE", "/api/v1/wireguard/peers/<peer_id>"),
     ("POST",   "/api/v1/wireguard/server/generate-keys"),
     ("POST",   "/api/v1/wireguard/peers/<peer_id>/generate-keys"),
+    ("GET",    "/api/v1/wireguard/config"),
 ]
 
 @wireguard_bp.get("/api/v1/wireguard")
@@ -44,3 +45,8 @@ def api_wireguard_peer_generate_keys(peer_id):
     data = request.get_json(silent=True) or {}
     preshared = data.get("preshared", True)
     return ok(execute("wireguard", "generate-peer-keys", id=peer_id, preshared=preshared))
+
+
+@wireguard_bp.get("/api/v1/wireguard/config")
+def api_wireguard_config():
+    return ok(execute("wireguard", "generate-config"))

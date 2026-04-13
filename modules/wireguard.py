@@ -25,4 +25,7 @@ def execute(command, **kwargs):
             kwargs.get("preshared", True)
         )
 
+    if command == "generate-config":
+        return wireguard_service.generate_config_text()
+
     raise Exception(f"Unknown wireguard command: {command}")

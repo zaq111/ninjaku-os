@@ -323,3 +323,71 @@ def delete_peer(peer_id):
         cur = db.execute("DELETE FROM wireguard_peers WHERE id=?", (peer_id,))
 
     return {"ok": cur.rowcount > 0, "id": peer_id, "deleted": cur.rowcount}
+
+def raw_server():
+    ensure_tables()
+    with connect() as db:
+        return db.execute("""
+            SELECT interface, listen_port, address, private_key, dns, mtu
+            FROM wireguard WHERE id='server'
+        """).fetchone()
+
+def raw_peers():
+    ensure_tables()
+    with connect() as db:
+        return db.execute("""
+            SELECT name, enabled, public_key, preshared_key, allowed_ips, endpoint, persistent_keepalive
+            FROM wireguard_peers
+            ORDER BY name
+        """).fetchall()
+
+def generate_config_text():
+    s = raw_server()
+    if not s:
+        return {"ok": False, "error": "server config not found"}
+
+    interface, listen_port, address, private_key, dns, mtu = s
+
+    if not private_key:
+        return {"ok": False, "error": "server private key missing"}
+
+    lines = [
+        "[Interface]",
+        f"Address = {address}",
+        f"ListenPort = {listen_port}",
+        f"PrivateKey = {private_key}",
+    ]
+
+    if mtu:
+        lines.append(f"MTU = {mtu}")
+
+    lines.append("")
+
+    for name, enabled, public_key, preshared_key, allowed_ips, endpoint, keepalive in raw_peers():
+        if not enabled:
+            continue
+        if not public_key or not allowed_ips:
+            continue
+
+        lines += [
+            f"# Peer: {name}",
+            "[Peer]",
+            f"PublicKey = {public_key}",
+            f"AllowedIPs = {allowed_ips}",
+        ]
+
+        if preshared_key:
+            lines.append(f"PresharedKey = {preshared_key}")
+        if endpoint:
+            lines.append(f"Endpoint = {endpoint}")
+        if keepalive:
+            lines.append(f"PersistentKeepalive = {keepalive}")
+
+        lines.append("")
+
+    return {
+        "ok": True,
+        "interface": interface,
+        "path": f"/etc/wireguard/{interface}.conf",
+        "config": "\n".join(lines).strip() + "\n",
+    }
