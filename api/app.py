@@ -2,216 +2,56 @@
 import sys
 sys.path.insert(0, "/opt/ninjaku")
 
-from flask import Flask, jsonify, request
-from lib.modules import execute
-from lib.settings import list_all, set as set_setting
+from flask import Flask
+from api.common import ok, APP_NAME, APP_VERSION, API_VERSION
+
+from api.routes_system import system_bp, ENDPOINTS as SYSTEM_ENDPOINTS
+from api.routes_network import network_bp, ENDPOINTS as NETWORK_ENDPOINTS
+from api.routes_router import router_bp, ENDPOINTS as ROUTER_ENDPOINTS
+from api.routes_firewall import firewall_bp, ENDPOINTS as FIREWALL_ENDPOINTS
+from api.routes_dhcp import dhcp_bp, ENDPOINTS as DHCP_ENDPOINTS
+from api.routes_devices import devices_bp, ENDPOINTS as DEVICES_ENDPOINTS
+from api.routes_profiles import profiles_bp, ENDPOINTS as PROFILES_ENDPOINTS
+from api.routes_policy import policy_bp, ENDPOINTS as POLICY_ENDPOINTS
+from api.routes_settings import settings_bp, ENDPOINTS as SETTINGS_ENDPOINTS
 
 app = Flask(__name__)
 
-def ok(data=None):
-    return jsonify({"ok": True, "data": data or {}})
+ALL_ENDPOINTS = (
+    SYSTEM_ENDPOINTS
+    + NETWORK_ENDPOINTS
+    + ROUTER_ENDPOINTS
+    + FIREWALL_ENDPOINTS
+    + DHCP_ENDPOINTS
+    + DEVICES_ENDPOINTS
+    + PROFILES_ENDPOINTS
+    + POLICY_ENDPOINTS
+    + SETTINGS_ENDPOINTS
+)
 
-def fail(error, code=500):
-    return jsonify({"ok": False, "error": str(error)}), code
+app.register_blueprint(system_bp)
+app.register_blueprint(network_bp)
+app.register_blueprint(router_bp)
+app.register_blueprint(firewall_bp)
+app.register_blueprint(dhcp_bp)
+app.register_blueprint(devices_bp)
+app.register_blueprint(profiles_bp)
+app.register_blueprint(policy_bp)
+app.register_blueprint(settings_bp)
 
-@app.get("/api/health")
-def api_health():
-    return ok({"service": "ninjaku-api", "status": "ok"})
+@app.get("/api/v1/endpoints")
+def api_full_endpoints():
+    return ok({"endpoints": [{"method": m, "path": p} for m, p in ALL_ENDPOINTS]})
 
-@app.get("/api/status")
-def api_status():
-    try:
-        return ok(execute("system", "status"))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/network")
-def api_network():
-    try:
-        return ok(execute("network", "status"))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/router")
-def api_router():
-    try:
-        return ok(execute("router", "status"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/router/enable")
-def api_router_enable():
-    try:
-        return ok(execute("router", "enable"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/router/disable")
-def api_router_disable():
-    try:
-        return ok(execute("router", "disable"))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/firewall")
-def api_firewall():
-    try:
-        return ok(execute("firewall", "status"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/firewall/apply-policy")
-def api_firewall_apply_policy():
-    try:
-        return ok(execute("firewall", "apply-policy"))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/dhcp")
-def api_dhcp():
-    try:
-        return ok(execute("dhcp", "status"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/dhcp/start")
-def api_dhcp_start():
-    try:
-        return ok(execute("dhcp", "start"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/dhcp/stop")
-def api_dhcp_stop():
-    try:
-        return ok(execute("dhcp", "stop"))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/devices")
-def api_devices():
-    try:
-        return ok(execute("devices", "status"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/devices/sync")
-def api_devices_sync():
-    try:
-        return ok(execute("devices", "sync"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/devices/<mac>/profile")
-def api_device_profile(mac):
-    try:
-        data = request.get_json(silent=True) or {}
-        profile = data.get("profile")
-        if not profile:
-            return fail("profile is required", 400)
-        return ok(execute("devices", "set-profile", mac=mac, value=profile))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/devices/<mac>/alias")
-def api_device_alias(mac):
-    try:
-        data = request.get_json(silent=True) or {}
-        alias = data.get("alias", "")
-        return ok(execute("devices", "set-alias", mac=mac, value=alias))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/devices/<mac>/notes")
-def api_device_notes(mac):
-    try:
-        data = request.get_json(silent=True) or {}
-        notes = data.get("notes", "")
-        return ok(execute("devices", "set-notes", mac=mac, value=notes))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/profiles")
-def api_profiles():
-    try:
-        return ok(execute("profiles", "status"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/profiles")
-def api_profiles_add():
-    try:
-        data = request.get_json(silent=True) or {}
-        name = data.get("name")
-        description = data.get("description", "")
-        if not name:
-            return fail("name is required", 400)
-        return ok(execute("profiles", "add", name=name, description=description))
-    except Exception as e:
-        return fail(e)
-
-@app.delete("/api/profiles/<name>")
-def api_profiles_delete(name):
-    try:
-        return ok(execute("profiles", "delete", name=name))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/policy")
-def api_policy():
-    try:
-        return ok(execute("policy", "status"))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/policy")
-def api_policy_set():
-    try:
-        data = request.get_json(silent=True) or {}
-        profile = data.get("profile")
-        field = data.get("field")
-        value = data.get("value")
-        if not profile or not field or value is None:
-            return fail("profile, field, and value are required", 400)
-        return ok(execute("policy", "set", profile=profile, field=field, value=value))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/policy/resolve")
-def api_policy_resolve():
-    try:
-        mac = request.args.get("mac")
-        profile = request.args.get("profile")
-        return ok(execute("policy", "resolve", mac=mac, profile=profile))
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/policy/apply")
-def api_policy_apply():
-    try:
-        return ok(execute("policy", "apply"))
-    except Exception as e:
-        return fail(e)
-
-@app.get("/api/settings")
-def api_settings():
-    try:
-        return ok({"settings": [{"key": k, "value": v} for k, v in list_all()]})
-    except Exception as e:
-        return fail(e)
-
-@app.post("/api/settings")
-def api_settings_set():
-    try:
-        data = request.get_json(silent=True) or {}
-        key = data.get("key")
-        value = data.get("value")
-        if not key or value is None:
-            return fail("key and value are required", 400)
-        set_setting(key, value)
-        return ok({"key": key, "value": str(value)})
-    except Exception as e:
-        return fail(e)
+@app.get("/api/v1")
+def api_index_full():
+    return ok({
+        "name": APP_NAME,
+        "version": APP_VERSION,
+        "api_version": API_VERSION,
+        "documentation": "/api/v1/endpoints",
+        "endpoints": [{"method": m, "path": p} for m, p in ALL_ENDPOINTS],
+    })
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8181)
