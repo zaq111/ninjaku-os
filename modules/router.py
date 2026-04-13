@@ -88,6 +88,27 @@ def nat_down():
         "stderr": r["stderr"],
     }
 
+
+def enable_router():
+    results = {}
+
+    results["lan_up"] = lan_up()
+    results["forward_on"] = enable_forward()
+    results["nat_up"] = nat_up()
+
+    # start DHCP via systemctl for now
+    dhcp = run(["systemctl", "restart", "dnsmasq"])
+    results["dhcp_restart"] = {
+        "ok": dhcp["ok"],
+        "stdout": dhcp["stdout"],
+        "stderr": dhcp["stderr"],
+    }
+
+    return {
+        "ok": all(v.get("ok", False) for v in results.values()),
+        "results": results,
+    }
+
 def execute(command, **kwargs):
     if command == "status":
         return status()
@@ -99,5 +120,7 @@ def execute(command, **kwargs):
         return nat_up()
     if command == "nat-down":
         return nat_down()
+    if command == "enable":
+        return enable_router()
 
     raise Exception(f"Unknown router command: {command}")

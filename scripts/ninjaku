@@ -102,6 +102,15 @@ def cmd_router(subcmd="status"):
             print(r.get("stderr"))
         return
 
+    if subcmd == "enable":
+        r = execute("router", "enable")
+        print("Router enable:", "OK" if r.get("ok") else "FAILED")
+        for name, result in r.get("results", {}).items():
+            print(f"  {name:<14}: {'OK' if result.get('ok') else 'FAILED'}")
+            if result.get("stderr"):
+                print(f"    {result.get('stderr')}")
+        return
+
     r = execute("router", "status")
     print(f"WAN        : {r.get('wan')}")
     print(f"LAN        : {r.get('lan')}")
@@ -184,7 +193,7 @@ def cmd_help():
     print("  ninjaku modules")
     print("  ninjaku network")
     print("  ninjaku firewall [status|init|reset]")
-    print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down]")
+    print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down|enable]")
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku help")
 
