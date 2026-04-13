@@ -1,12 +1,13 @@
 import subprocess
 from pathlib import Path
 
-def run(args, timeout=10):
+def run(args, timeout=10, input_text=None):
     p = subprocess.run(
         args,
         text=True,
         capture_output=True,
         timeout=timeout,
+        input=input_text,
     )
     return {
         "ok": p.returncode == 0,
