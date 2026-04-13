@@ -1,0 +1,112 @@
+NAME = "policy"
+VERSION = "1.0"
+
+from lib.db import connect
+
+DEFAULT_POLICIES = {
+    "default": {
+        "internet": "allow",
+        "bandwidth": "unlimited",
+        "dns_filter": "none",
+        "schedule": "always",
+        "priority": "normal",
+    },
+    "staff": {
+        "internet": "allow",
+        "bandwidth": "unlimited",
+        "dns_filter": "none",
+        "schedule": "always",
+        "priority": "high",
+    },
+    "guest": {
+        "internet": "allow",
+        "bandwidth": "limited",
+        "dns_filter": "basic",
+        "schedule": "always",
+        "priority": "low",
+    },
+    "blocked": {
+        "internet": "deny",
+        "bandwidth": "none",
+        "dns_filter": "none",
+        "schedule": "never",
+        "priority": "blocked",
+    },
+}
+
+def ensure_table():
+    with connect() as db:
+        db.execute("""
+            CREATE TABLE IF NOT EXISTS policies (
+                profile TEXT PRIMARY KEY,
+                internet TEXT DEFAULT 'allow',
+                bandwidth TEXT DEFAULT 'unlimited',
+                dns_filter TEXT DEFAULT 'none',
+                schedule TEXT DEFAULT 'always',
+                priority TEXT DEFAULT 'normal',
+                updated_at DATETIME DEFAULT CURRENT_TIMESTAMP
+            )
+        """)
+
+        for profile, p in DEFAULT_POLICIES.items():
+            db.execute("""
+                INSERT OR IGNORE INTO policies
+                (profile, internet, bandwidth, dns_filter, schedule, priority)
+                VALUES (?, ?, ?, ?, ?, ?)
+            """, (
+                profile,
+                p["internet"],
+                p["bandwidth"],
+                p["dns_filter"],
+                p["schedule"],
+                p["priority"],
+            ))
+
+def list_policies():
+    ensure_table()
+    with connect() as db:
+        cur = db.execute("""
+            SELECT profile, internet, bandwidth, dns_filter, schedule, priority, updated_at
+            FROM policies
+            ORDER BY profile
+        """)
+        rows = cur.fetchall()
+
+    return [{
+        "profile": r[0],
+        "internet": r[1],
+        "bandwidth": r[2],
+        "dns_filter": r[3],
+        "schedule": r[4],
+        "priority": r[5],
+        "updated_at": r[6],
+    } for r in rows]
+
+def set_policy(profile, field, value):
+    ensure_table()
+
+    allowed = {"internet", "bandwidth", "dns_filter", "schedule", "priority"}
+    if field not in allowed:
+        return {"ok": False, "error": "field not allowed"}
+
+    with connect() as db:
+        db.execute("INSERT OR IGNORE INTO policies(profile) VALUES(?)", (profile,))
+        db.execute(
+            f"UPDATE policies SET {field}=?, updated_at=CURRENT_TIMESTAMP WHERE profile=?",
+            (value, profile)
+        )
+
+    return {"ok": True, "profile": profile, "field": field, "value": value}
+
+def execute(command, **kwargs):
+    if command == "status":
+        return {"policies": list_policies()}
+
+    if command == "set":
+        return set_policy(
+            kwargs.get("profile", ""),
+            kwargs.get("field", ""),
+            kwargs.get("value", "")
+        )
+
+    raise Exception(f"Unknown policy command: {command}")

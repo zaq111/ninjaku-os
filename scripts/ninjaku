@@ -45,6 +45,39 @@ def cmd_status_json():
 
 
 
+
+def cmd_policy(args=None):
+    args = args or []
+    print_header()
+
+    if args and args[0] == "set":
+        if len(args) < 4:
+            print("Usage: ninjaku policy set <profile> <field> <value>")
+            print("Fields: internet, bandwidth, dns_filter, schedule, priority")
+            return
+
+        r = execute("policy", "set", profile=args[1], field=args[2], value=" ".join(args[3:]))
+        print("Policy update:", "OK" if r.get("ok") else "FAILED")
+        if r.get("error"):
+            print(r.get("error"))
+        else:
+            print(f"{r.get('profile')} {r.get('field')} = {r.get('value')}")
+        return
+
+    r = execute("policy", "status")
+    policies = r.get("policies", [])
+
+    print(f"{'PROFILE':<12} {'INTERNET':<10} {'BANDWIDTH':<12} {'DNS':<10} {'SCHEDULE':<10} {'PRIORITY'}")
+    for p in policies:
+        print(
+            f"{p.get('profile'):<12} "
+            f"{p.get('internet'):<10} "
+            f"{p.get('bandwidth'):<12} "
+            f"{p.get('dns_filter'):<10} "
+            f"{p.get('schedule'):<10} "
+            f"{p.get('priority')}"
+        )
+
 def cmd_profiles(args=None):
     args = args or []
     print_header()
@@ -314,6 +347,7 @@ def cmd_help():
     print("  ninjaku config [list|set]")
     print("  ninjaku devices [sync|set-alias|set-notes|set-profile]")
     print("  ninjaku profiles [add|delete]")
+    print("  ninjaku policy [set]")
     print("  ninjaku help")
 
 def main():
@@ -367,6 +401,10 @@ def main():
 
     if args[0] == "profiles":
         cmd_profiles(args[1:])
+        return
+
+    if args[0] == "policy":
+        cmd_policy(args[1:])
         return
 
     print(f"Unknown command: {args[0]}")
