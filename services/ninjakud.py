@@ -9,6 +9,7 @@ from lib.settings import get_bool
 from lib.modules import execute
 
 HEARTBEAT_SECONDS = 60
+last_discovery = None
 
 def log(action, detail=""):
     with connect() as db:
@@ -26,11 +27,18 @@ def restore_state():
             log("router_restore_failed", str(e))
 
 def discover_devices():
+    global last_discovery
+
     try:
         result = execute("devices", "sync")
         lease_count = result.get("lease_count", result.get("count", 0))
         neighbor_count = result.get("neighbor_count", 0)
-        log("device_discovery", f"lease_count={lease_count} neighbor_count={neighbor_count}")
+        detail = f"lease_count={lease_count} neighbor_count={neighbor_count}"
+
+        if detail != last_discovery or lease_count > 0 or neighbor_count > 0:
+            log("device_discovery", detail)
+            last_discovery = detail
+
     except Exception as e:
         log("device_discovery_failed", str(e))
 
@@ -43,7 +51,6 @@ def main():
 
     while True:
         time.sleep(HEARTBEAT_SECONDS)
-        log("heartbeat", "ninjakud alive")
         discover_devices()
 
 if __name__ == "__main__":
