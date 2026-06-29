@@ -2,6 +2,7 @@ NAME = "devices"
 VERSION = "1.2"
 
 from pathlib import Path
+from lib.system import run
 from lib.db import connect
 from lib.policy import resolve
 from lib.modules import execute as module_execute
@@ -29,8 +30,43 @@ def parse_leases():
 
     return devices
 
+
+def parse_neighbors():
+    devices = []
+    out = run(["ip", "neigh"])["stdout"]
+
+    for line in out.splitlines():
+        parts = line.split()
+        if len(parts) < 5:
+            continue
+
+        ip = parts[0]
+        dev = ""
+        mac = ""
+        state = parts[-1]
+
+        if "dev" in parts:
+            dev = parts[parts.index("dev") + 1]
+
+        if "lladdr" in parts:
+            mac = parts[parts.index("lladdr") + 1].lower()
+
+        if not mac:
+            continue
+
+        devices.append({
+            "ip": ip,
+            "mac": mac,
+            "hostname": "",
+            "interface": dev,
+            "state": state,
+        })
+
+    return devices
+
 def sync():
     leases = parse_leases()
+    neighbors = parse_neighbors()
 
     with connect() as db:
         for d in leases:
@@ -44,7 +80,22 @@ def sync():
                     seen_count=seen_count+1
             """, (d["mac"], d["ip"], d["hostname"]))
 
-    return {"ok": True, "count": len(leases)}
+        for d in neighbors:
+            db.execute("""
+                INSERT INTO devices(mac, ip)
+                VALUES(?, ?)
+                ON CONFLICT(mac) DO UPDATE SET
+                    ip=excluded.ip,
+                    last_seen=CURRENT_TIMESTAMP,
+                    seen_count=seen_count+1
+            """, (d["mac"], d["ip"]))
+
+    return {
+        "ok": True,
+        "lease_count": len(leases),
+        "neighbor_count": len(neighbors),
+        "count": len(leases) + len(neighbors),
+    }
 
 def list_devices():
     with connect() as db:

@@ -28,8 +28,9 @@ def restore_state():
 def discover_devices():
     try:
         result = execute("devices", "sync")
-        count = result.get("count", 0)
-        log("device_discovery", f"lease_count={count}")
+        lease_count = result.get("lease_count", result.get("count", 0))
+        neighbor_count = result.get("neighbor_count", 0)
+        log("device_discovery", f"lease_count={lease_count} neighbor_count={neighbor_count}")
     except Exception as e:
         log("device_discovery_failed", str(e))
 
