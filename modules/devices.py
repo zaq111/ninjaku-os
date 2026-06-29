@@ -6,6 +6,7 @@ from lib.system import run
 from lib.db import connect
 from lib.policy import resolve
 from lib.modules import execute as module_execute
+from lib.settings import get
 
 LEASE_FILE = Path("/var/lib/misc/dnsmasq.leases")
 
@@ -40,6 +41,7 @@ def parse_leases():
 
 def parse_neighbors():
     devices = []
+    lan_if = get("router.lan", "eth1")
     out = run(["ip", "neigh"])["stdout"]
 
     for line in out.splitlines():
@@ -59,6 +61,9 @@ def parse_neighbors():
             mac = parts[parts.index("lladdr") + 1].lower()
 
         if not mac:
+            continue
+
+        if dev != lan_if:
             continue
 
         devices.append({
