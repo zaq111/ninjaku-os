@@ -177,12 +177,12 @@ def cmd_devices(args=None):
         print("(empty)")
         return
 
-    print(f"{'IP':<16} {'MAC':<18} {'HOSTNAME':<16} {'PROFILE':<10} {'NET':<8} {'BW':<10} {'SEEN'}")
+    print(f"{'IP':<16} {'MAC':<18} {'STATUS':<8} {'PROFILE':<10} {'NET':<8} {'BW':<10} {'SEEN'}")
     for dev in devices:
         print(
             f"{dev.get('ip',''):<16} "
             f"{dev.get('mac',''):<18} "
-            f"{dev.get('hostname',''):<16} "
+            f"{dev.get('status',''):<8} "
             f"{dev.get('profile',''):<10} "
             f"{dev.get('policy_internet',''):<8} "
             f"{dev.get('policy_bandwidth',''):<10} "

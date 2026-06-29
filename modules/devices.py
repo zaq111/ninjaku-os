@@ -9,6 +9,13 @@ from lib.modules import execute as module_execute
 
 LEASE_FILE = Path("/var/lib/misc/dnsmasq.leases")
 
+
+def ensure_schema():
+    with connect() as db:
+        cols = [r[1] for r in db.execute("PRAGMA table_info(devices)").fetchall()]
+        if "status" not in cols:
+            db.execute("ALTER TABLE devices ADD COLUMN status TEXT DEFAULT 'unknown'")
+
 def parse_leases():
     devices = []
 
@@ -65,6 +72,7 @@ def parse_neighbors():
     return devices
 
 def sync():
+    ensure_schema()
     leases = parse_leases()
     neighbors = parse_neighbors()
 
@@ -77,7 +85,8 @@ def sync():
                     ip=excluded.ip,
                     hostname=excluded.hostname,
                     last_seen=CURRENT_TIMESTAMP,
-                    seen_count=seen_count+1
+                    seen_count=seen_count+1,
+                    status='online'
             """, (d["mac"], d["ip"], d["hostname"]))
 
         for d in neighbors:
@@ -87,7 +96,8 @@ def sync():
                 ON CONFLICT(mac) DO UPDATE SET
                     ip=excluded.ip,
                     last_seen=CURRENT_TIMESTAMP,
-                    seen_count=seen_count+1
+                    seen_count=seen_count+1,
+                    status='online'
             """, (d["mac"], d["ip"]))
 
     return {
@@ -100,7 +110,7 @@ def sync():
 def list_devices():
     with connect() as db:
         cur = db.execute("""
-            SELECT mac, ip, hostname, alias, notes, profile, last_seen, seen_count
+            SELECT mac, ip, hostname, alias, notes, profile, last_seen, seen_count, status
             FROM devices
             ORDER BY last_seen DESC
         """)
@@ -122,6 +132,7 @@ def list_devices():
             "policy_dns": effective_policy.get("dns_filter"),
             "last_seen": r[6],
             "seen_count": r[7],
+            "status": r[8],
         })
     return devices
 

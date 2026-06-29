@@ -26,7 +26,8 @@ CREATE TABLE IF NOT EXISTS devices (
     profile TEXT DEFAULT 'default',
     first_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
     last_seen DATETIME DEFAULT CURRENT_TIMESTAMP,
-    seen_count INTEGER DEFAULT 1
+    seen_count INTEGER DEFAULT 1,
+    status TEXT DEFAULT 'unknown'
 );
 """
 
