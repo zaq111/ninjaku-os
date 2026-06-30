@@ -11,6 +11,7 @@ window.UI = {
       dns_filter: '🛡',
       dhcp: '⇄',
       network: '☍',
+      qos: '⚡',
       healthy: '✓',
       uptime: '◷',
       cpu: '◉',

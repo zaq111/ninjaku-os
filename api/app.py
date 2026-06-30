@@ -18,6 +18,7 @@ from api.routes_modules import modules_bp, ENDPOINTS as MODULES_ENDPOINTS
 from api.routes_leases import leases_bp, ENDPOINTS as LEASES_ENDPOINTS
 from api.routes_dns_filter import dns_filter_bp, ENDPOINTS as DNS_FILTER_ENDPOINTS
 from api.routes_adguard import adguard_bp, ENDPOINTS as ADGUARD_ENDPOINTS
+from api.routes_qos import qos_bp, ENDPOINTS as QOS_ENDPOINTS
 
 app = Flask(__name__)
 
@@ -35,6 +36,7 @@ ALL_ENDPOINTS = (
     + LEASES_ENDPOINTS
     + DNS_FILTER_ENDPOINTS
     + ADGUARD_ENDPOINTS
+    + QOS_ENDPOINTS
 )
 
 app.register_blueprint(system_bp)
@@ -50,6 +52,7 @@ app.register_blueprint(modules_bp)
 app.register_blueprint(leases_bp)
 app.register_blueprint(dns_filter_bp)
 app.register_blueprint(adguard_bp)
+app.register_blueprint(qos_bp)
 
 @app.get("/api/v1/endpoints")
 def api_full_endpoints():

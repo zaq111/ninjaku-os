@@ -516,3 +516,26 @@ textarea:focus {
   padding: 8px 6px;
   font-size: 12px;
 }
+
+.qos-form {
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+}
+
+.qos-checks {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 16px;
+  margin-top: 16px;
+  color: var(--muted);
+  font-weight: 700;
+}
+
+.qos-checks input {
+  height: auto;
+}
+
+@media (max-width: 900px) {
+  .qos-form {
+    grid-template-columns: 1fr;
+  }
+}
