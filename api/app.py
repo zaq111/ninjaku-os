@@ -2,7 +2,7 @@
 import sys
 sys.path.insert(0, "/opt/ninjaku")
 
-from flask import Flask
+from flask import Flask, send_from_directory
 from api.common import ok, APP_NAME, APP_VERSION, API_VERSION
 
 from api.routes_system import system_bp, ENDPOINTS as SYSTEM_ENDPOINTS
@@ -52,6 +52,15 @@ def api_index_full():
         "documentation": "/api/v1/endpoints",
         "endpoints": [{"method": m, "path": p} for m, p in ALL_ENDPOINTS],
     })
+
+
+@app.get("/")
+def webui_index():
+    return send_from_directory("/opt/ninjaku/webui", "index.html")
+
+@app.get("/static/<path:path>")
+def webui_static(path):
+    return send_from_directory("/opt/ninjaku/webui", path)
 
 if __name__ == "__main__":
     app.run(host="127.0.0.1", port=8181)

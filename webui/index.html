@@ -1,0 +1,114 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ninjaku OS Router</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/static/style.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">忍</div>
+        <div>
+          <h1>Ninjaku OS</h1>
+          <p>Router Dashboard</p>
+        </div>
+      </div>
+
+      <nav>
+        <a href="#overview" class="active">Overview</a>
+        <a href="#router">Router</a>
+        <a href="#devices">Devices</a>
+        <a href="#policy">Policy</a>
+        <a href="#profiles">Profiles</a>
+        <a href="#settings">Settings</a>
+      </nav>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <h2 id="page-title">Overview</h2>
+          <p id="subtitle">Ninjaku OS Router 1.0 Alpha</p>
+        </div>
+        <button onclick="refreshAll()">Refresh</button>
+      </header>
+
+      <section class="grid cards">
+        <div class="card">
+          <span>Router State</span>
+          <strong id="router-state">Loading...</strong>
+          <p id="router-detail">WAN / LAN</p>
+        </div>
+        <div class="card">
+          <span>Firewall</span>
+          <strong id="firewall-state">Loading...</strong>
+          <p id="firewall-detail">nftables</p>
+        </div>
+        <div class="card">
+          <span>DHCP</span>
+          <strong id="dhcp-state">Loading...</strong>
+          <p id="dhcp-detail">dnsmasq</p>
+        </div>
+        <div class="card">
+          <span>Devices</span>
+          <strong id="device-count">0</strong>
+          <p>known devices</p>
+        </div>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Router</h3>
+          <div>
+            <button onclick="routerEnable()">Enable</button>
+            <button onclick="routerDisable()" class="danger">Disable</button>
+          </div>
+        </div>
+        <pre id="router-json">Loading...</pre>
+      </section>
+
+      <section class="panel">
+        <div class="panel-head">
+          <h3>Devices</h3>
+          <button onclick="devicesSync()">Sync</button>
+        </div>
+        <table>
+          <thead>
+            <tr>
+              <th>IP</th>
+              <th>MAC</th>
+              <th>Status</th>
+              <th>Profile</th>
+              <th>Internet</th>
+              <th>Bandwidth</th>
+            </tr>
+          </thead>
+          <tbody id="devices-table"></tbody>
+        </table>
+      </section>
+
+      <section class="grid">
+        <div class="panel">
+          <h3>Profiles</h3>
+          <div id="profiles-list">Loading...</div>
+        </div>
+
+        <div class="panel">
+          <h3>Policy</h3>
+          <div id="policy-list">Loading...</div>
+        </div>
+      </section>
+
+      <section class="panel">
+        <h3>Settings</h3>
+        <pre id="settings-json">Loading...</pre>
+      </section>
+    </main>
+  </div>
+
+  <script src="/static/app.js"></script>
+</body>
+</html>
