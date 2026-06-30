@@ -11,6 +11,7 @@ MODULES = [
     {"id": "overview", "title": "Overview", "icon": "home", "order": 0, "page": "overview"},
     {"id": "router", "title": "Router", "icon": "router", "order": 10, "page": "router"},
     {"id": "devices", "title": "Devices", "icon": "devices", "order": 20, "page": "devices"},
+    {"id": "leases", "title": "Static Leases", "icon": "dhcp", "order": 25, "page": "leases"},
     {"id": "policy", "title": "Policy", "icon": "policy", "order": 30, "page": "policy"},
     {"id": "profiles", "title": "Profiles", "icon": "profiles", "order": 40, "page": "profiles"},
     {"id": "settings", "title": "Settings", "icon": "settings", "order": 90, "page": "settings"},

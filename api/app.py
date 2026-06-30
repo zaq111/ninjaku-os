@@ -15,6 +15,7 @@ from api.routes_profiles import profiles_bp, ENDPOINTS as PROFILES_ENDPOINTS
 from api.routes_policy import policy_bp, ENDPOINTS as POLICY_ENDPOINTS
 from api.routes_settings import settings_bp, ENDPOINTS as SETTINGS_ENDPOINTS
 from api.routes_modules import modules_bp, ENDPOINTS as MODULES_ENDPOINTS
+from api.routes_leases import leases_bp, ENDPOINTS as LEASES_ENDPOINTS
 
 app = Flask(__name__)
 
@@ -29,6 +30,7 @@ ALL_ENDPOINTS = (
     + POLICY_ENDPOINTS
     + SETTINGS_ENDPOINTS
     + MODULES_ENDPOINTS
+    + LEASES_ENDPOINTS
 )
 
 app.register_blueprint(system_bp)
@@ -41,6 +43,7 @@ app.register_blueprint(profiles_bp)
 app.register_blueprint(policy_bp)
 app.register_blueprint(settings_bp)
 app.register_blueprint(modules_bp)
+app.register_blueprint(leases_bp)
 
 @app.get("/api/v1/endpoints")
 def api_full_endpoints():

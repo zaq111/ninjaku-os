@@ -232,3 +232,29 @@ pre {
   .grid-6, .grid-4, .grid-3, .grid-2, .kv { grid-template-columns: 1fr; }
   .hero { display: block; }
 }
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1.5fr 1fr 1fr auto;
+  gap: 12px;
+}
+
+input {
+  border: 1px solid var(--border);
+  background: var(--surface);
+  border-radius: 12px;
+  padding: 0 14px;
+  height: 42px;
+  outline: none;
+}
+
+input:focus {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+
+@media (max-width: 900px) {
+  .form-grid {
+    grid-template-columns: 1fr;
+  }
+}
