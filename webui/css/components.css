@@ -493,3 +493,26 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.device-dns-panel {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  padding: 12px;
+  margin-bottom: 18px;
+}
+
+.mini-panel-title {
+  font-size: 12px;
+  font-weight: 900;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin-bottom: 10px;
+}
+
+.compact-table th,
+.compact-table td {
+  padding: 8px 6px;
+  font-size: 12px;
+}

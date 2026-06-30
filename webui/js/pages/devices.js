@@ -72,9 +72,24 @@ window.DeviceActions = {
     await Ninjaku.navigate('devices');
   },
 
-  edit(mac) {
+  async edit(mac) {
     const d = this.devices.find(x => x.mac === mac);
     if (!d) return UI.toast('error', 'Device not found', mac);
+
+    let dnsRows = '';
+    try {
+      const q = await NinjakuAPI.get('/adguard/querylog?limit=8&client=' + encodeURIComponent(d.ip || ''));
+      const logs = ((q.data || {}).data || []).slice(0, 8);
+      dnsRows = logs.map(item => `
+        <tr>
+          <td>${escapeHtml(item.question?.name || '-')}</td>
+          <td>${UI.badge(item.reason || 'allowed', item.reason ? 'orange' : 'green')}</td>
+          <td>${escapeHtml(item.time || '-')}</td>
+        </tr>
+      `).join('');
+    } catch (err) {
+      dnsRows = '<tr><td colspan="3">Unable to load DNS activity.</td></tr>';
+    }
 
     const profileOptions = this.profiles.map(p => `
       <option value="${escapeHtml(p.name)}" ${p.name === d.profile ? 'selected' : ''}>${escapeHtml(p.name)}</option>
@@ -105,6 +120,14 @@ window.DeviceActions = {
               <div><span>Profile</span><strong>${escapeHtml(d.profile || 'default')}</strong></div>
               <div><span>Internet</span><strong>${escapeHtml(d.policy_internet || '-')}</strong></div>
               <div><span>Bandwidth</span><strong>${escapeHtml(d.policy_bandwidth || '-')}</strong></div>
+            </div>
+
+            <div class="device-dns-panel">
+              <div class="mini-panel-title">Recent DNS Activity</div>
+              <table class="table compact-table">
+                <thead><tr><th>Domain</th><th>Status</th><th>Time</th></tr></thead>
+                <tbody>${dnsRows || '<tr><td colspan="3">No DNS activity yet.</td></tr>'}</tbody>
+              </table>
             </div>
 
             <div class="form-stack">
