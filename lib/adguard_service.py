@@ -106,6 +106,37 @@ def http_post(path, payload=None):
 
 
 
+
+def get_dns_config():
+    r = http_get("/control/dns_info")
+    return {
+        "ok": r["ok"],
+        "error": r.get("error", ""),
+        "data": r.get("json"),
+        "text": r.get("text", ""),
+    }
+
+def set_upstream_dns(upstreams):
+    if isinstance(upstreams, str):
+        upstreams = [x.strip() for x in upstreams.splitlines() if x.strip()]
+
+    current = get_dns_config()
+    if not current.get("ok"):
+        return {"ok": False, "error": current.get("error", "unable to read dns config")}
+
+    cfg = current.get("data") or {}
+    cfg["upstream_dns"] = upstreams
+
+    r = http_post("/control/dns_config", cfg)
+    return {
+        "ok": r["ok"],
+        "upstream_dns": upstreams,
+        "error": r.get("error", ""),
+        "response": r.get("json"),
+        "text": r.get("text", ""),
+    }
+
+
 def querylog(limit=20, client=""):
     path = f"/control/querylog?limit={int(limit)}"
     if client:

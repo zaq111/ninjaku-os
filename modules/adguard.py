@@ -25,4 +25,10 @@ def execute(command, **kwargs):
             kwargs.get("client", "")
         )
 
+    if command == "dns-config":
+        return adguard_service.get_dns_config()
+
+    if command == "set-upstream":
+        return adguard_service.set_upstream_dns(kwargs.get("upstreams", []))
+
     raise Exception(f"Unknown adguard command: {command}")

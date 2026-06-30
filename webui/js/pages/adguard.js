@@ -5,9 +5,10 @@ Pages.adguard = {
   subtitle: 'DNS filtering and ad blocking integrated with Ninjaku OS.',
 
   async render() {
-    const [data, querylogData] = await Promise.all([
+    const [data, querylogData, dnsConfigData] = await Promise.all([
       NinjakuAPI.get('/adguard'),
-      NinjakuAPI.get('/adguard/querylog?limit=10')
+      NinjakuAPI.get('/adguard/querylog?limit=10'),
+      NinjakuAPI.get('/adguard/dns-config')
     ]);
     const st = data.status || {};
     const stats = data.stats || {};
@@ -30,6 +31,8 @@ Pages.adguard = {
       return `<div class="activity-item"><div class="activity-dot"></div><div>${escapeHtml(domain)}</div><strong>${count}</strong></div>`;
     }).join('');
 
+    const dnsConfig = dnsConfigData.data || {};
+    const upstreams = dnsConfig.upstream_dns || [];
     const qlog = ((querylogData.data || {}).data || []).slice(0, 10);
     const qrows = qlog.map(q => `
       <tr>
@@ -80,6 +83,11 @@ Pages.adguard = {
         `)}
       </section>
 
+      ${UI.panel('Upstream DNS', `
+        <textarea id="adguard-upstreams" placeholder="One upstream per line">${escapeHtml(upstreams.join('\n'))}</textarea>
+        <p style="color:var(--muted);font-size:13px;margin-top:10px">Examples: https://dns10.quad9.net/dns-query, 1.1.1.1, 8.8.8.8</p>
+      `, `<button class="primary-button" onclick="AdGuardActions.saveUpstreams()">Save Upstream</button>`)}
+
       ${UI.panel('Recent DNS Queries', `
         <table class="table">
           <thead><tr><th>Domain</th><th>Client</th><th>Status</th><th>Time</th></tr></thead>
@@ -103,6 +111,20 @@ window.AdGuardActions = {
   async enable() {
     await NinjakuAPI.post('/adguard/protection', { enabled: true });
     UI.toast('success', 'AdGuard enabled', 'DNS protection is now enabled.');
+    await Ninjaku.navigate('adguard');
+  },
+
+  async saveUpstreams() {
+    const value = document.getElementById('adguard-upstreams').value;
+    const upstreams = value.split('\n').map(x => x.trim()).filter(Boolean);
+
+    if (!upstreams.length) {
+      UI.toast('error', 'Upstream required', 'Please enter at least one DNS upstream.');
+      return;
+    }
+
+    await NinjakuAPI.post('/adguard/upstream', { upstreams });
+    UI.toast('success', 'Upstream saved', 'AdGuard DNS upstream was updated.');
     await Ninjaku.navigate('adguard');
   },
 

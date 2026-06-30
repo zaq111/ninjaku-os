@@ -11,6 +11,8 @@ ENDPOINTS = [
     ("POST", "/api/v1/adguard/protection"),
     ("POST", "/api/v1/adguard/update-filters"),
     ("GET",  "/api/v1/adguard/querylog"),
+    ("GET",  "/api/v1/adguard/dns-config"),
+    ("POST", "/api/v1/adguard/upstream"),
 ]
 
 @adguard_bp.get("/api/v1/adguard")
@@ -23,6 +25,22 @@ def api_adguard():
 
 
 
+
+
+@adguard_bp.get("/api/v1/adguard/dns-config")
+def api_adguard_dns_config():
+    try:
+        return ok(execute("adguard", "dns-config"))
+    except Exception as e:
+        return fail(e)
+
+@adguard_bp.post("/api/v1/adguard/upstream")
+def api_adguard_upstream():
+    data = request.get_json(silent=True) or {}
+    upstreams = data.get("upstreams", [])
+    if not upstreams:
+        return fail("upstreams is required", 400, "VALIDATION_ERROR")
+    return ok(execute("adguard", "set-upstream", upstreams=upstreams))
 
 @adguard_bp.get("/api/v1/adguard/querylog")
 def api_adguard_querylog():
