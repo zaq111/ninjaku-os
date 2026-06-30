@@ -26,6 +26,19 @@ def restore_state():
         except Exception as e:
             log("router_restore_failed", str(e))
 
+
+def restore_router_if_needed():
+    try:
+        from lib.settings import get
+        enabled = get("router.enabled", "false")
+        state = get("router.state", "unknown")
+
+        if enabled == "true" and state != "running":
+            result = execute("router", "enable")
+            log("router_retry", f"state={state} ok={result.get('ok')}")
+    except Exception as e:
+        log("router_retry_failed", str(e))
+
 def discover_devices():
     global last_discovery
 
@@ -51,6 +64,8 @@ def main():
 
     while True:
         time.sleep(HEARTBEAT_SECONDS)
+        restore_router_if_needed()
+        restore_router_if_needed()
         discover_devices()
 
 if __name__ == "__main__":
