@@ -26,6 +26,13 @@ def restore_state():
         except Exception as e:
             log("router_restore_failed", str(e))
 
+    if get_bool("qos.enabled", False):
+        try:
+            result = execute("qos", "apply")
+            log("qos_restore", f"qos apply ok={result.get('ok')}")
+        except Exception as e:
+            log("qos_restore_failed", str(e))
+
 
 def restore_router_if_needed():
     try:
