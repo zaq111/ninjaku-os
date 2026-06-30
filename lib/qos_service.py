@@ -80,6 +80,48 @@ def cake_args(rate, direction):
 
     return args
 
+
+def apply_dscp_marks():
+    # Minimal DSCP marking for CAKE diffserv4.
+    # Keep it small and safe. No CIDR/provider classification.
+    run(["nft", "delete", "table", "inet", "ninjaku_qos"])
+
+    cmds = [
+        ["nft", "add", "table", "inet", "ninjaku_qos"],
+        ["nft", "add", "chain", "inet", "ninjaku_qos", "mark_prerouting", "{", "type", "filter", "hook", "prerouting", "priority", "mangle", ";", "policy", "accept", ";", "}"],
+        ["nft", "add", "chain", "inet", "ninjaku_qos", "mark_postrouting", "{", "type", "filter", "hook", "postrouting", "priority", "mangle", ";", "policy", "accept", ";", "}"],
+
+        # DNS, ICMP, SSH: latency sensitive
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_prerouting", "udp", "dport", "53", "ip", "dscp", "set", "cs5"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_prerouting", "tcp", "dport", "53", "ip", "dscp", "set", "cs5"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_prerouting", "ip", "protocol", "icmp", "ip", "dscp", "set", "cs5"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_prerouting", "tcp", "dport", "22", "ip", "dscp", "set", "cs5"],
+
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_postrouting", "udp", "dport", "53", "ip", "dscp", "set", "cs5"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_postrouting", "tcp", "dport", "53", "ip", "dscp", "set", "cs5"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_postrouting", "ip", "protocol", "icmp", "ip", "dscp", "set", "cs5"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_postrouting", "tcp", "dport", "22", "ip", "dscp", "set", "cs5"],
+
+        # Bulk fallback for common torrent ports
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_prerouting", "tcp", "dport", "{", "6881-6889", ",", "51413", "}", "ip", "dscp", "set", "cs1"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_prerouting", "udp", "dport", "{", "6881-6889", ",", "51413", "}", "ip", "dscp", "set", "cs1"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_postrouting", "tcp", "dport", "{", "6881-6889", ",", "51413", "}", "ip", "dscp", "set", "cs1"],
+        ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_postrouting", "udp", "dport", "{", "6881-6889", ",", "51413", "}", "ip", "dscp", "set", "cs1"],
+    ]
+
+    errors = []
+    for cmd in cmds:
+        r = run(cmd)
+        if not r["ok"]:
+            errors.append({"cmd": " ".join(cmd), "stderr": r["stderr"]})
+
+    return {"ok": len(errors) == 0, "errors": errors}
+
+def clear_dscp_marks():
+    run(["nft", "delete", "table", "inet", "ninjaku_qos"])
+    return {"ok": True}
+
+
 def clear():
     c = cfg()
     wan = c["wan"]
@@ -90,6 +132,7 @@ def clear():
     run(["tc", "qdisc", "del", "dev", ifb, "root"])
     run(["ip", "link", "set", ifb, "down"])
 
+    clear_dscp_marks()
     set("qos.enabled", "false")
     return {"ok": True, "wan": wan, "ifb": ifb}
 
@@ -107,6 +150,8 @@ def apply():
     run(["tc", "qdisc", "del", "dev", wan, "root"])
     run(["tc", "qdisc", "del", "dev", wan, "ingress"])
     run(["tc", "qdisc", "del", "dev", ifb, "root"])
+
+    dscp = apply_dscp_marks()
 
     # Upload shaping: LAN -> WAN
     up = run(["tc", "qdisc", "replace", "dev", wan, "root"] + cake_args(c["upload"], "upload"))
@@ -132,6 +177,7 @@ def apply():
         "upload_result": up,
         "redirect_result": redirect,
         "download_result": down,
+        "dscp_result": dscp,
     }
 
 def set_config(values):
