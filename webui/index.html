@@ -4,7 +4,8 @@
   <meta charset="utf-8">
   <title>Ninjaku OS Router</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/assets/style.css">
+  <link rel="stylesheet" href="/assets/css/theme.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
 </head>
 <body>
   <div class="app">
@@ -13,128 +14,33 @@
         <div class="logo">忍</div>
         <div>
           <h1>Ninjaku OS</h1>
-          <p>Router Dashboard</p>
+          <p>Modular Router Platform</p>
         </div>
       </div>
 
-      <nav>
-        <a href="#overview" class="active">Overview</a>
-        <a href="#router">Router</a>
-        <a href="#devices">Devices</a>
-        <a href="#policy">Policy</a>
-        <a href="#profiles">Profiles</a>
-        <a href="#settings">Settings</a>
-      </nav>
+      <nav id="sidebar-menu"></nav>
     </aside>
 
     <main>
       <header class="topbar">
         <div>
           <h2 id="page-title">Overview</h2>
-          <p id="subtitle">Ninjaku OS Router 1.0 Alpha</p>
+          <p id="page-subtitle">Ninjaku OS Router 1.0 Alpha</p>
         </div>
-        <button onclick="refreshAll()">Refresh</button>
+        <button onclick="window.Ninjaku.refresh()">Refresh</button>
       </header>
 
-      <section class="grid cards">
-        <div class="card">
-          <span>Router State</span>
-          <strong id="router-state">Loading...</strong>
-          <p id="router-detail">WAN / LAN</p>
-        </div>
-        <div class="card">
-          <span>Firewall</span>
-          <strong id="firewall-state">Loading...</strong>
-          <p id="firewall-detail">nftables</p>
-        </div>
-        <div class="card">
-          <span>DHCP</span>
-          <strong id="dhcp-state">Loading...</strong>
-          <p id="dhcp-detail">dnsmasq</p>
-        </div>
-        <div class="card">
-          <span>Devices</span>
-          <strong id="device-count">0</strong>
-          <p>known devices</p>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h3>Router</h3>
-          <div>
-            <button onclick="routerEnable()">Enable</button>
-            <button onclick="routerDisable()" class="danger">Disable</button>
-          </div>
-        </div>
-
-        <div class="router-summary">
-          <div>
-            <span>State</span>
-            <strong id="router-panel-state">Loading...</strong>
-          </div>
-          <div>
-            <span>WAN</span>
-            <strong id="router-panel-wan">-</strong>
-          </div>
-          <div>
-            <span>LAN</span>
-            <strong id="router-panel-lan">-</strong>
-          </div>
-          <div>
-            <span>LAN IP</span>
-            <strong id="router-panel-lanip">-</strong>
-          </div>
-          <div>
-            <span>DHCP</span>
-            <strong id="router-panel-dhcp">-</strong>
-          </div>
-          <div>
-            <span>IPv4 Forward</span>
-            <strong id="router-panel-forward">-</strong>
-          </div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <div class="panel-head">
-          <h3>Devices</h3>
-          <button onclick="devicesSync()">Sync</button>
-        </div>
-        <table>
-          <thead>
-            <tr>
-              <th>IP</th>
-              <th>MAC</th>
-              <th>Status</th>
-              <th>Profile</th>
-              <th>Internet</th>
-              <th>Bandwidth</th>
-            </tr>
-          </thead>
-          <tbody id="devices-table"></tbody>
-        </table>
-      </section>
-
-      <section class="grid">
-        <div class="panel">
-          <h3>Profiles</h3>
-          <div id="profiles-list">Loading...</div>
-        </div>
-
-        <div class="panel">
-          <h3>Policy</h3>
-          <div id="policy-list">Loading...</div>
-        </div>
-      </section>
-
-      <section class="panel">
-        <h3>Settings</h3>
-        <pre id="settings-json">Loading...</pre>
-      </section>
+      <section id="content"></section>
     </main>
   </div>
 
-  <script src="/assets/app.js"></script>
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/pages/overview.js"></script>
+  <script src="/assets/js/pages/router.js"></script>
+  <script src="/assets/js/pages/devices.js"></script>
+  <script src="/assets/js/pages/policy.js"></script>
+  <script src="/assets/js/pages/profiles.js"></script>
+  <script src="/assets/js/pages/settings.js"></script>
+  <script src="/assets/js/app.js"></script>
 </body>
 </html>
