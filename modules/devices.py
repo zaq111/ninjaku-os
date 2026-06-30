@@ -2,6 +2,7 @@ NAME = "devices"
 VERSION = "1.2"
 
 from pathlib import Path
+import ipaddress
 from lib.system import run
 from lib.db import connect
 from lib.policy import resolve
@@ -12,12 +13,16 @@ LEASE_FILE = Path("/var/lib/misc/dnsmasq.leases")
 
 
 
-def lan_prefix():
-    lan_ip = get("router.lan_ip", "192.168.10.1/24").split("/")[0]
-    return ".".join(lan_ip.split(".")[:3]) + "."
+
+def lan_network():
+    lan_ip = get("router.lan_ip", "192.168.10.1/24")
+    return ipaddress.ip_interface(lan_ip).network
 
 def is_lan_ip(ip):
-    return ip.startswith(lan_prefix())
+    try:
+        return ipaddress.ip_address(ip) in lan_network()
+    except Exception:
+        return False
 
 def ensure_schema():
     with connect() as db:
