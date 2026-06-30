@@ -28,7 +28,8 @@ def api_adguard():
 def api_adguard_querylog():
     try:
         limit = request.args.get("limit", 20)
-        return ok(execute("adguard", "querylog", limit=limit))
+        client = request.args.get("client", "")
+        return ok(execute("adguard", "querylog", limit=limit, client=client))
     except Exception as e:
         return fail(e)
 

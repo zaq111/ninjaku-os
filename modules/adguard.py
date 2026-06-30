@@ -20,6 +20,9 @@ def execute(command, **kwargs):
         return adguard_service.update_filters()
 
     if command == "querylog":
-        return adguard_service.querylog(kwargs.get("limit", 20))
+        return adguard_service.querylog(
+            kwargs.get("limit", 20),
+            kwargs.get("client", "")
+        )
 
     raise Exception(f"Unknown adguard command: {command}")

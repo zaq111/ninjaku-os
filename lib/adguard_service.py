@@ -106,8 +106,11 @@ def http_post(path, payload=None):
 
 
 
-def querylog(limit=20):
-    r = http_get(f"/control/querylog?limit={int(limit)}")
+def querylog(limit=20, client=""):
+    path = f"/control/querylog?limit={int(limit)}"
+    if client:
+        path += "&search=" + str(client)
+    r = http_get(path)
     return {
         "ok": r["ok"],
         "error": r.get("error", ""),
