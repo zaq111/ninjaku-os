@@ -98,6 +98,15 @@ window.DeviceActions = {
               </div>
             </div>
 
+            <div class="device-detail-grid">
+              <div><span>IP Address</span><strong>${escapeHtml(d.ip || '-')}</strong></div>
+              <div><span>MAC</span><strong>${escapeHtml(d.mac || '-')}</strong></div>
+              <div><span>Status</span><strong>${escapeHtml(d.status || 'unknown')}</strong></div>
+              <div><span>Profile</span><strong>${escapeHtml(d.profile || 'default')}</strong></div>
+              <div><span>Internet</span><strong>${escapeHtml(d.policy_internet || '-')}</strong></div>
+              <div><span>Bandwidth</span><strong>${escapeHtml(d.policy_bandwidth || '-')}</strong></div>
+            </div>
+
             <div class="form-stack">
               <label>Alias</label>
               <input id="edit-alias" value="${escapeHtml(d.alias || '')}" placeholder="Friendly name">
