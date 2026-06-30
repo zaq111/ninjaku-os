@@ -8,6 +8,7 @@ window.UI = {
       profiles: '♧',
       settings: '⚙',
       firewall: '🛡',
+      dns_filter: '🛡',
       dhcp: '⇄',
       network: '☍',
       healthy: '✓',

@@ -13,6 +13,7 @@ MODULES = [
     {"id": "devices", "title": "Devices", "icon": "devices", "order": 20, "page": "devices"},
     {"id": "leases", "title": "Static Leases", "icon": "dhcp", "order": 25, "page": "leases"},
     {"id": "policy", "title": "Policy", "icon": "policy", "order": 30, "page": "policy"},
+    {"id": "dns_filter", "title": "DNS Filter", "icon": "firewall", "order": 35, "page": "dns_filter"},
     {"id": "profiles", "title": "Profiles", "icon": "profiles", "order": 40, "page": "profiles"},
     {"id": "settings", "title": "Settings", "icon": "settings", "order": 90, "page": "settings"},
 ]
