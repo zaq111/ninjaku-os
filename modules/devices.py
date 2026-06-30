@@ -11,6 +11,14 @@ from lib.settings import get
 LEASE_FILE = Path("/var/lib/misc/dnsmasq.leases")
 
 
+
+def lan_prefix():
+    lan_ip = get("router.lan_ip", "192.168.10.1/24").split("/")[0]
+    return ".".join(lan_ip.split(".")[:3]) + "."
+
+def is_lan_ip(ip):
+    return ip.startswith(lan_prefix())
+
 def ensure_schema():
     with connect() as db:
         cols = [r[1] for r in db.execute("PRAGMA table_info(devices)").fetchall()]
@@ -83,6 +91,9 @@ def sync():
 
     with connect() as db:
         for d in leases:
+            if not is_lan_ip(d["ip"]):
+                continue
+
             db.execute("""
                 INSERT INTO devices(mac, ip, hostname)
                 VALUES(?, ?, ?)
