@@ -13,4 +13,13 @@ def execute(command, **kwargs):
     if command == "install":
         return adguard_service.install()
 
+    if command == "protection":
+        return adguard_service.set_protection(kwargs.get("enabled", True))
+
+    if command == "update-filters":
+        return adguard_service.update_filters()
+
+    if command == "querylog":
+        return adguard_service.querylog(kwargs.get("limit", 20))
+
     raise Exception(f"Unknown adguard command: {command}")

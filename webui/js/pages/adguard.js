@@ -5,7 +5,10 @@ Pages.adguard = {
   subtitle: 'DNS filtering and ad blocking integrated with Ninjaku OS.',
 
   async render() {
-    const data = await NinjakuAPI.get('/adguard');
+    const [data, querylogData] = await Promise.all([
+      NinjakuAPI.get('/adguard'),
+      NinjakuAPI.get('/adguard/querylog?limit=10')
+    ]);
     const st = data.status || {};
     const stats = data.stats || {};
 
@@ -27,6 +30,16 @@ Pages.adguard = {
       return `<div class="activity-item"><div class="activity-dot"></div><div>${escapeHtml(domain)}</div><strong>${count}</strong></div>`;
     }).join('');
 
+    const qlog = ((querylogData.data || {}).data || []).slice(0, 10);
+    const qrows = qlog.map(q => `
+      <tr>
+        <td><strong>${escapeHtml(q.question?.name || '-')}</strong></td>
+        <td>${escapeHtml(q.client || '-')}</td>
+        <td>${UI.badge(q.reason || 'allowed', q.reason ? 'orange' : 'green')}</td>
+        <td>${escapeHtml(q.time || '-')}</td>
+      </tr>
+    `).join('');
+
     return `
       <section class="grid grid-4" style="margin-bottom:18px">
         ${UI.statCard({ icon: '🛡', color: running ? 'green' : 'red', label: 'Service', value: data.service || 'unknown', sub: 'AdGuardHome' })}
@@ -45,7 +58,11 @@ Pages.adguard = {
           ${UI.kv('DNS Addresses', (st.dns_addresses || []).join(', ') || '-')}
         </div>
       `, `
-        <button class="primary-button" onclick="window.open('/','_blank')">Open AdGuard UI</button>
+        <button class="primary-button" onclick="AdGuardActions.openUI()">Open AdGuard UI</button>
+        ${protectionEnabled
+          ? '<button class="danger-button" onclick="AdGuardActions.disable()">Disable Protection</button>'
+          : '<button class="primary-button" onclick="AdGuardActions.enable()">Enable Protection</button>'}
+        <button class="soft-button" onclick="AdGuardActions.updateFilters()">Update Filters</button>
         <button class="soft-button" onclick="Ninjaku.refresh()">Refresh</button>
       `)}
 
@@ -63,9 +80,51 @@ Pages.adguard = {
         `)}
       </section>
 
+      ${UI.panel('Recent DNS Queries', `
+        <table class="table">
+          <thead><tr><th>Domain</th><th>Client</th><th>Status</th><th>Time</th></tr></thead>
+          <tbody>${qrows || '<tr><td colspan="4">No DNS queries yet.</td></tr>'}</tbody>
+        </table>
+      `)}
+
       ${!data.api_ok ? UI.panel('Connection Error', `
         <p class="fail">${escapeHtml(data.api_error || data.stats_error || 'Unable to connect to AdGuard Home API.')}</p>
       `) : ''}
     `;
+  }
+};
+
+
+window.AdGuardActions = {
+  openUI() {
+    window.open(window.location.protocol + '//' + window.location.hostname + ':3000/', '_blank');
+  },
+
+  async enable() {
+    await NinjakuAPI.post('/adguard/protection', { enabled: true });
+    UI.toast('success', 'AdGuard enabled', 'DNS protection is now enabled.');
+    await Ninjaku.navigate('adguard');
+  },
+
+  async updateFilters() {
+    UI.toast('info', 'Updating filters', 'AdGuard filter update started.');
+    await NinjakuAPI.post('/adguard/update-filters');
+    UI.toast('success', 'Filters updated', 'AdGuard filter lists were refreshed.');
+    await Ninjaku.navigate('adguard');
+  },
+
+  async disable() {
+    const ok = await UI.confirm({
+      title: 'Disable AdGuard protection?',
+      message: 'DNS filtering will stop until protection is enabled again.',
+      confirmText: 'Disable',
+      danger: true
+    });
+
+    if (!ok) return;
+
+    await NinjakuAPI.post('/adguard/protection', { enabled: false });
+    UI.toast('success', 'AdGuard disabled', 'DNS protection is now disabled.');
+    await Ninjaku.navigate('adguard');
   }
 };

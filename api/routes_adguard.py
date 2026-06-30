@@ -8,6 +8,9 @@ ENDPOINTS = [
     ("GET",  "/api/v1/adguard"),
     ("POST", "/api/v1/adguard/url"),
     ("POST", "/api/v1/adguard/install"),
+    ("POST", "/api/v1/adguard/protection"),
+    ("POST", "/api/v1/adguard/update-filters"),
+    ("GET",  "/api/v1/adguard/querylog"),
 ]
 
 @adguard_bp.get("/api/v1/adguard")
@@ -17,6 +20,32 @@ def api_adguard():
     except Exception as e:
         return fail(e)
 
+
+
+
+
+@adguard_bp.get("/api/v1/adguard/querylog")
+def api_adguard_querylog():
+    try:
+        limit = request.args.get("limit", 20)
+        return ok(execute("adguard", "querylog", limit=limit))
+    except Exception as e:
+        return fail(e)
+
+@adguard_bp.post("/api/v1/adguard/update-filters")
+def api_adguard_update_filters():
+    try:
+        return ok(execute("adguard", "update-filters"))
+    except Exception as e:
+        return fail(e)
+
+@adguard_bp.post("/api/v1/adguard/protection")
+def api_adguard_protection():
+    data = request.get_json(silent=True) or {}
+    enabled = data.get("enabled")
+    if enabled is None:
+        return fail("enabled is required", 400, "VALIDATION_ERROR")
+    return ok(execute("adguard", "protection", enabled=bool(enabled)))
 
 @adguard_bp.post("/api/v1/adguard/install")
 def api_adguard_install():

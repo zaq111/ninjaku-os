@@ -73,6 +73,70 @@ def http_get(path):
     except Exception as e:
         return {"ok": False, "error": str(e), "json": None, "text": ""}
 
+
+def http_post(path, payload=None):
+    opener, logged_in, login_error = opener_with_session()
+
+    if not logged_in:
+        return {
+            "ok": False,
+            "error": f"login failed: {login_error}",
+            "json": None,
+            "text": "",
+        }
+
+    data = json.dumps(payload or {}).encode("utf-8")
+
+    req = urllib.request.Request(
+        base_url() + path,
+        data=data,
+        headers={"Content-Type": "application/json"},
+        method="POST",
+    )
+
+    try:
+        with opener.open(req, timeout=10) as r:
+            body = r.read().decode("utf-8", errors="ignore")
+            try:
+                return {"ok": True, "json": json.loads(body), "text": body}
+            except Exception:
+                return {"ok": True, "json": None, "text": body}
+    except Exception as e:
+        return {"ok": False, "error": str(e), "json": None, "text": ""}
+
+
+
+def querylog(limit=20):
+    r = http_get(f"/control/querylog?limit={int(limit)}")
+    return {
+        "ok": r["ok"],
+        "error": r.get("error", ""),
+        "data": r.get("json"),
+        "text": r.get("text", ""),
+    }
+
+
+def update_filters():
+    r = http_post("/control/filtering/refresh", {})
+    return {
+        "ok": r["ok"],
+        "error": r.get("error", ""),
+        "response": r.get("json"),
+        "text": r.get("text", ""),
+    }
+
+
+def set_protection(enabled):
+    r = http_post("/control/protection", {"enabled": bool(enabled)})
+    return {
+        "ok": r["ok"],
+        "enabled": bool(enabled),
+        "error": r.get("error", ""),
+        "response": r.get("json"),
+        "text": r.get("text", ""),
+    }
+
+
 def status():
     svc = service_status()
     api = http_get("/control/status")
