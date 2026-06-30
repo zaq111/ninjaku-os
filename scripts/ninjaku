@@ -47,6 +47,55 @@ def cmd_status_json():
 
 
 
+
+def cmd_leases(args=None):
+    print_header()
+    args = args or []
+
+    if not args:
+        r = execute("static_leases", "status")
+        leases = r.get("leases", [])
+        print(f"Static leases: {len(leases)}")
+        print()
+        print(f"{'IP':<16} {'MAC':<18} {'HOSTNAME':<20} {'ENABLED'}")
+        for l in leases:
+            print(f"{l.get('ip',''):<16} {l.get('mac',''):<18} {l.get('hostname',''):<20} {l.get('enabled')}")
+        return
+
+    if args[0] == "set":
+        if len(args) < 3:
+            print("Usage: ninjaku leases set <mac> <ip> [hostname]")
+            return
+        hostname = args[3] if len(args) > 3 else ""
+        r = execute("static_leases", "set", mac=args[1], ip=args[2], hostname=hostname)
+        print("Static lease set:", "OK" if r.get("ok") else "FAILED")
+        print(f"MAC      : {r.get('mac')}")
+        print(f"IP       : {r.get('ip')}")
+        print(f"Hostname : {r.get('hostname')}")
+        return
+
+    if args[0] == "delete":
+        if len(args) < 2:
+            print("Usage: ninjaku leases delete <mac>")
+            return
+        r = execute("static_leases", "delete", mac=args[1])
+        print("Static lease delete:", "OK" if r.get("ok") else "FAILED")
+        print(f"MAC     : {r.get('mac')}")
+        print(f"Deleted : {r.get('deleted')}")
+        return
+
+    if args[0] == "apply":
+        r = execute("static_leases", "apply")
+        print("Static leases apply:", "OK" if r.get("ok") else "FAILED")
+        print(f"Config : {r.get('conf')}")
+        return
+
+    print("Usage:")
+    print("  ninjaku leases")
+    print("  ninjaku leases set <mac> <ip> [hostname]")
+    print("  ninjaku leases delete <mac>")
+    print("  ninjaku leases apply")
+
 def cmd_api():
     print_header()
     r = execute("api", "status")
@@ -421,6 +470,7 @@ def cmd_help():
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku config [list|set]")
     print("  ninjaku devices [sync|cleanup-wan|mark-offline|set-alias|set-notes|set-profile]")
+    print("  ninjaku leases [set|delete|apply]")
     print("  ninjaku profiles [add|delete]")
     print("  ninjaku policy [set|resolve|apply]")
     print("  ninjaku api")
@@ -473,6 +523,10 @@ def main():
 
     if args[0] == "devices":
         cmd_devices(args[1:])
+        return
+
+    if args[0] == "leases":
+        cmd_leases(args[1:])
         return
 
     if args[0] == "profiles":
