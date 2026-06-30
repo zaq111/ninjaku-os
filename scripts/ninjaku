@@ -48,6 +48,68 @@ def cmd_status_json():
 
 
 
+
+def cmd_dns_filter(args=None):
+    print_header()
+    args = args or []
+
+    if not args:
+        r = execute("dns_filter", "status")
+        print(f"Blocked domains : {r.get('enabled_domains')}")
+        print(f"Config          : {r.get('conf')}")
+        print()
+        for d in r.get("domains", [])[:30]:
+            print(f"{d.get('domain'):<40} {d.get('list_name'):<12} {d.get('enabled')}")
+        if len(r.get("domains", [])) > 30:
+            print(f"... and {len(r.get('domains', [])) - 30} more")
+        return
+
+    if args[0] == "add":
+        if len(args) < 2:
+            print("Usage: ninjaku dns-filter add <domain>")
+            return
+        r = execute("dns_filter", "add", domain=args[1])
+        print("DNS block add:", "OK" if r.get("ok") else "FAILED")
+        print(f"Domain : {r.get('domain')}")
+        return
+
+    if args[0] == "delete":
+        if len(args) < 2:
+            print("Usage: ninjaku dns-filter delete <domain>")
+            return
+        r = execute("dns_filter", "delete", domain=args[1])
+        print("DNS block delete:", "OK" if r.get("ok") else "FAILED")
+        print(f"Domain  : {r.get('domain')}")
+        print(f"Deleted : {r.get('deleted')}")
+        return
+
+    if args[0] == "import":
+        if len(args) < 2:
+            print("Usage: ninjaku dns-filter import <file> [list_name]")
+            return
+        list_name = args[2] if len(args) > 2 else "imported"
+        r = execute("dns_filter", "import", path=args[1], list_name=list_name)
+        print("DNS blocklist import:", "OK" if r.get("ok") else "FAILED")
+        print(f"Imported : {r.get('imported')}")
+        print(f"Skipped  : {r.get('skipped')}")
+        print(f"List     : {r.get('list_name')}")
+        return
+
+    if args[0] == "apply":
+        r = execute("dns_filter", "apply")
+        print("DNS filter apply:", "OK" if r.get("ok") else "FAILED")
+        print(f"Skipped : {r.get('skipped')}")
+        print(f"State   : {r.get('state')}")
+        print(f"Config  : {r.get('conf')}")
+        return
+
+    print("Usage:")
+    print("  ninjaku dns-filter")
+    print("  ninjaku dns-filter add <domain>")
+    print("  ninjaku dns-filter delete <domain>")
+    print("  ninjaku dns-filter import <file> [list_name]")
+    print("  ninjaku dns-filter apply")
+
 def cmd_leases(args=None):
     print_header()
     args = args or []
@@ -471,6 +533,7 @@ def cmd_help():
     print("  ninjaku config [list|set]")
     print("  ninjaku devices [sync|cleanup-wan|mark-offline|set-alias|set-notes|set-profile]")
     print("  ninjaku leases [set|delete|apply]")
+    print("  ninjaku dns-filter [add|delete|import|apply]")
     print("  ninjaku profiles [add|delete]")
     print("  ninjaku policy [set|resolve|apply]")
     print("  ninjaku api")
@@ -527,6 +590,10 @@ def main():
 
     if args[0] == "leases":
         cmd_leases(args[1:])
+        return
+
+    if args[0] == "dns-filter":
+        cmd_dns_filter(args[1:])
         return
 
     if args[0] == "profiles":

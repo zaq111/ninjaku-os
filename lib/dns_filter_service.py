@@ -91,6 +91,61 @@ def apply():
         "stderr": r["stderr"],
     }
 
+
+def normalize_domain(line):
+    line = line.strip()
+
+    if not line or line.startswith("#") or line.startswith("!"):
+        return ""
+
+    # AdGuard/uBlock style: ||example.com^
+    if line.startswith("||"):
+        line = line[2:]
+        line = line.split("^")[0]
+        line = line.split("/")[0]
+        return line.lower().strip(".")
+
+    # hosts style: 0.0.0.0 example.com
+    parts = line.split()
+    if len(parts) >= 2 and (parts[0] == "0.0.0.0" or parts[0] == "127.0.0.1"):
+        return parts[1].lower().strip(".")
+
+    # plain domain
+    if " " not in line and "/" not in line and "." in line:
+        return line.lower().strip(".")
+
+    return ""
+
+def import_file(path, list_name="imported"):
+    ensure_table()
+    count = 0
+    skipped = 0
+
+    with open(path, "r", errors="ignore") as f:
+        lines = f.readlines()
+
+    with connect() as db:
+        for line in lines:
+            domain = normalize_domain(line)
+            if not domain:
+                skipped += 1
+                continue
+
+            db.execute("""
+                INSERT OR REPLACE INTO dns_filter_domains(domain, list_name, enabled)
+                VALUES(?, ?, 1)
+            """, (domain, list_name))
+            count += 1
+
+    apply()
+
+    return {
+        "ok": True,
+        "imported": count,
+        "skipped": skipped,
+        "list_name": list_name,
+    }
+
 def status():
     domains = list_domains()
     return {

@@ -16,4 +16,10 @@ def execute(command, **kwargs):
     if command == "apply":
         return dns_filter_service.apply()
 
+    if command == "import":
+        return dns_filter_service.import_file(
+            kwargs.get("path", ""),
+            kwargs.get("list_name", "imported")
+        )
+
     raise Exception(f"Unknown dns_filter command: {command}")
