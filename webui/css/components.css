@@ -258,3 +258,136 @@ input:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.toast-root {
+  position: fixed;
+  right: 22px;
+  bottom: 22px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.toast {
+  min-width: 280px;
+  max-width: 420px;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  border-radius: var(--radius);
+  padding: 14px 16px;
+  display: flex;
+  gap: 12px;
+  align-items: flex-start;
+}
+
+.toast-icon {
+  width: 28px;
+  height: 28px;
+  border-radius: 999px;
+  display: grid;
+  place-items: center;
+  font-weight: 900;
+}
+
+.toast.success .toast-icon { background: var(--green-soft); color: var(--green); }
+.toast.error .toast-icon { background: var(--red-soft); color: var(--red); }
+.toast.info .toast-icon { background: var(--blue-soft); color: var(--blue); }
+
+.toast strong {
+  display: block;
+  font-size: 14px;
+}
+
+.toast span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 3px;
+}
+
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, .45);
+  z-index: 9998;
+  display: grid;
+  place-items: center;
+  padding: 24px;
+}
+
+.modal {
+  width: min(560px, 100%);
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  border: 1px solid var(--border);
+  box-shadow: var(--shadow-md);
+  overflow: hidden;
+}
+
+.modal-head {
+  padding: 20px 22px;
+  border-bottom: 1px solid var(--border);
+}
+
+.modal-head h3 {
+  margin: 0;
+  font-size: 18px;
+}
+
+.modal-body {
+  padding: 22px;
+  color: var(--muted);
+  line-height: 1.6;
+}
+
+.modal-actions {
+  padding: 16px 22px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+}
+
+.empty-state {
+  border: 1px dashed var(--border-strong);
+  background: var(--surface-soft);
+  border-radius: var(--radius-lg);
+  padding: 34px;
+  text-align: center;
+  color: var(--muted);
+}
+
+.empty-state strong {
+  display: block;
+  color: var(--text);
+  font-size: 16px;
+  margin-bottom: 6px;
+}
+
+.loading-state {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: var(--radius-lg);
+  padding: 30px;
+  color: var(--muted);
+  box-shadow: var(--shadow-sm);
+}
+
+.toast-root {
+  position: fixed !important;
+  top: 22px;
+  right: 22px;
+  bottom: auto;
+  z-index: 99999;
+}
+
+.toast {
+  animation: toastIn .2s ease-out;
+}
+
+@keyframes toastIn {
+  from { opacity: 0; transform: translateY(-8px); }
+  to { opacity: 1; transform: translateY(0); }
+}

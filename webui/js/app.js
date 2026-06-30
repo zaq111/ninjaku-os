@@ -60,13 +60,13 @@ window.Ninjaku = {
     document.getElementById('page-subtitle').textContent = Pages[page].subtitle || '';
 
     const content = document.getElementById('content');
-    content.innerHTML = UI.panel('Loading', '<p>Please wait...</p>');
+    content.innerHTML = UI.loading('Loading page...');
 
     try {
       content.innerHTML = await Pages[page].render();
       await this.updateSidebarState();
     } catch (err) {
-      content.innerHTML = UI.panel('Error', `<p class="fail">${escapeHtml(err.message)}</p>`);
+      content.innerHTML = UI.panel('Error', `<p class="fail">${escapeHtml(err.message)}</p>`); UI.toast('error', 'Page error', err.message);
     }
   },
 
@@ -83,6 +83,7 @@ window.Ninjaku = {
 
   async applyPolicy() {
     await NinjakuAPI.post('/policy/apply');
+    UI.toast('success', 'Policy applied', 'Firewall and policy rules were refreshed.');
     await this.refresh();
   },
 
