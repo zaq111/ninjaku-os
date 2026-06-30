@@ -5,31 +5,8 @@ Pages.qos = {
   subtitle: 'Ninjaku traffic shaping powered by CAKE and IFB.',
 
   async render() {
-    const [data, pipesData] = await Promise.all([
-      NinjakuAPI.get('/qos'),
-      NinjakuAPI.get('/qos/pipes')
-    ]);
-
+    const data = await NinjakuAPI.get('/qos');
     const c = data.config || {};
-    QosPipeActions.pipes = pipesData.pipes || [];
-
-    const pipeCards = QosPipeActions.pipes.map(p => `
-      <div class="pipe-card">
-        <div>
-          <strong>${escapeHtml(p.name)}</strong>
-          <span>${escapeHtml(p.description || p.id)}</span>
-        </div>
-        <div class="pipe-rate">
-          <b>↓ ${escapeHtml(p.download)}</b>
-          <b>↑ ${escapeHtml(p.upload)}</b>
-        </div>
-        <div class="pipe-actions">
-          ${UI.badge(p.priority, p.priority === 'high' ? 'green' : (p.priority === 'low' ? 'orange' : 'blue'))}
-          <button class="soft-button" onclick="QosPipeActions.edit('${escapeHtml(p.id)}')">Edit</button>
-          <button class="danger-button" onclick="QosPipeActions.remove('${escapeHtml(p.id)}')">Delete</button>
-        </div>
-      </div>
-    `).join('');
 
     return `
       <section class="grid grid-4" style="margin-bottom:18px">
@@ -65,12 +42,6 @@ Pages.qos = {
         <button class="primary-button" onclick="QosActions.saveApply()">Save & Apply</button>
         <button class="danger-button" onclick="QosActions.disable()">Disable QoS</button>
       `)}
-
-      ${UI.panel('Pipes', `
-        <div class="pipe-grid">
-          ${pipeCards || UI.empty('No pipes', 'Create a QoS pipe to reuse bandwidth settings.')}
-        </div>
-      `, `<button class="primary-button" onclick="QosPipeActions.create()">Add Pipe</button>`)}
 
       ${UI.panel('WAN qdisc', `<pre>${escapeHtml(data.wan_qdisc || 'No qdisc data')}</pre>`)}
       ${UI.panel('IFB Download qdisc', `<pre>${escapeHtml(data.ifb_qdisc || 'No IFB qdisc data')}</pre>`)}
