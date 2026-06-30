@@ -95,26 +95,64 @@ def apply():
 def normalize_domain(line):
     line = line.strip()
 
-    if not line or line.startswith("#") or line.startswith("!"):
+    if not line:
         return ""
 
-    # AdGuard/uBlock style: ||example.com^
+    # comments
+    if line.startswith("#") or line.startswith("!"):
+        return ""
+
+    # whitelist rule, skip for now
+    if line.startswith("@@"):
+        return ""
+
+    # unsupported regex / cosmetic / complex rules
+    if line.startswith("/") or line.startswith("*"):
+        return ""
+
+    # AdGuard/uBlock domain rule:
+    # ||example.com^
+    # ||example.com^$important
     if line.startswith("||"):
         line = line[2:]
         line = line.split("^")[0]
+        line = line.split("$")[0]
         line = line.split("/")[0]
-        return line.lower().strip(".")
+        domain = line.lower().strip(".")
+        return domain if is_valid_domain(domain) else ""
 
-    # hosts style: 0.0.0.0 example.com
+    # hosts style:
+    # 0.0.0.0 example.com
+    # 127.0.0.1 example.com
     parts = line.split()
-    if len(parts) >= 2 and (parts[0] == "0.0.0.0" or parts[0] == "127.0.0.1"):
-        return parts[1].lower().strip(".")
+    if len(parts) >= 2 and parts[0] in ("0.0.0.0", "127.0.0.1", "::1"):
+        domain = parts[1].lower().strip(".")
+        return domain if is_valid_domain(domain) else ""
 
-    # plain domain
-    if " " not in line and "/" not in line and "." in line:
-        return line.lower().strip(".")
+    # plain domain only
+    if " " not in line and "/" not in line and "$" not in line:
+        domain = line.lower().strip(".")
+        return domain if is_valid_domain(domain) else ""
 
     return ""
+
+def is_valid_domain(domain):
+    if not domain or "." not in domain:
+        return False
+    if len(domain) > 253:
+        return False
+    if "*" in domain or "/" in domain or ":" in domain:
+        return False
+    labels = domain.split(".")
+    for label in labels:
+        if not label or len(label) > 63:
+            return False
+        allowed = "abcdefghijklmnopqrstuvwxyz0123456789-"
+        if any(c not in allowed for c in label):
+            return False
+        if label.startswith("-") or label.endswith("-"):
+            return False
+    return True
 
 def import_file(path, list_name="imported"):
     ensure_table()
