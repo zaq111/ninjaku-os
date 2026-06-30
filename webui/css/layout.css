@@ -106,3 +106,67 @@ pre {
   .sidebar { width: 100%; }
   .cards, .grid, .kv { grid-template-columns: 1fr; }
 }
+
+.device-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.device-card {
+  display: flex;
+  gap: 14px;
+  align-items: flex-start;
+  background: var(--panel2);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+}
+
+.device-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 14px;
+  background: #151f38;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 26px;
+}
+
+.device-main {
+  flex: 1;
+  min-width: 0;
+}
+
+.device-title {
+  font-size: 17px;
+  font-weight: 800;
+  margin-bottom: 6px;
+}
+
+.device-sub {
+  color: var(--muted);
+  font-size: 13px;
+  margin-bottom: 10px;
+  word-break: break-all;
+}
+
+.device-tags {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.empty-state {
+  color: var(--muted);
+  background: var(--panel2);
+  border: 1px dashed var(--border);
+  border-radius: 16px;
+  padding: 24px;
+  text-align: center;
+}
+
+@media (max-width: 900px) {
+  .device-grid { grid-template-columns: 1fr; }
+}
