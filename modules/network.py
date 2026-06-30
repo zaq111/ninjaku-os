@@ -1,17 +1,10 @@
 NAME = "network"
-VERSION = "1.0"
+VERSION = "1.1"
 
-from lib.system import run
-
-def status():
-    return {
-        "interfaces": run(["ip", "-br", "addr"])["stdout"],
-        "routes": run(["ip", "route"])["stdout"],
-        "dns": run(["cat", "/etc/resolv.conf"])["stdout"],
-    }
+from lib import network_service
 
 def execute(command, **kwargs):
     if command == "status":
-        return status()
+        return network_service.status()
 
     raise Exception(f"Unknown network command: {command}")
