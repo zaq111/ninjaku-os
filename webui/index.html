@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <title>Ninjaku OS Router</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <link rel="stylesheet" href="/static/style.css">
+  <link rel="stylesheet" href="/assets/style.css">
 </head>
 <body>
   <div class="app">
@@ -67,7 +67,33 @@
             <button onclick="routerDisable()" class="danger">Disable</button>
           </div>
         </div>
-        <pre id="router-json">Loading...</pre>
+
+        <div class="router-summary">
+          <div>
+            <span>State</span>
+            <strong id="router-panel-state">Loading...</strong>
+          </div>
+          <div>
+            <span>WAN</span>
+            <strong id="router-panel-wan">-</strong>
+          </div>
+          <div>
+            <span>LAN</span>
+            <strong id="router-panel-lan">-</strong>
+          </div>
+          <div>
+            <span>LAN IP</span>
+            <strong id="router-panel-lanip">-</strong>
+          </div>
+          <div>
+            <span>DHCP</span>
+            <strong id="router-panel-dhcp">-</strong>
+          </div>
+          <div>
+            <span>IPv4 Forward</span>
+            <strong id="router-panel-forward">-</strong>
+          </div>
+        </div>
       </section>
 
       <section class="panel">
@@ -109,6 +135,6 @@
     </main>
   </div>
 
-  <script src="/static/app.js"></script>
+  <script src="/assets/app.js"></script>
 </body>
 </html>

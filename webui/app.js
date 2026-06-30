@@ -14,12 +14,22 @@ function pretty(obj) {
 
 async function loadRouter() {
   const data = await api('/router');
+
+  const stateClass = data.state === 'running' ? 'ok' : (data.state === 'waiting_for_lan' ? 'warn' : 'fail');
+
   document.getElementById('router-state').textContent = data.state || 'unknown';
-  document.getElementById('router-state').className =
-    data.state === 'running' ? 'ok' : (data.state === 'waiting_for_lan' ? 'warn' : 'fail');
+  document.getElementById('router-state').className = stateClass;
   document.getElementById('router-detail').textContent =
     `${data.wan || '-'} → ${data.lan || '-'} (${data.lan_ip || '-'})`;
-  document.getElementById('router-json').textContent = pretty(data);
+
+  document.getElementById('router-panel-state').textContent = data.state || 'unknown';
+  document.getElementById('router-panel-state').className = stateClass;
+  document.getElementById('router-panel-wan').textContent = `${data.wan || '-'} (${data.wan_state || '-'})`;
+  document.getElementById('router-panel-lan').textContent = `${data.lan || '-'} (${data.lan_state || '-'})`;
+  document.getElementById('router-panel-lanip').textContent = data.lan_ip || '-';
+  document.getElementById('router-panel-dhcp').textContent = data.dhcp || '-';
+  document.getElementById('router-panel-dhcp').className = data.dhcp === 'active' ? 'ok' : 'warn';
+  document.getElementById('router-panel-forward').textContent = data.ip_forward || '-';
 }
 
 async function loadFirewall() {

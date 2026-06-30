@@ -58,9 +58,9 @@ def api_index_full():
 def webui_index():
     return send_from_directory("/opt/ninjaku/webui", "index.html")
 
-@app.get("/static/<path:path>")
+@app.get("/assets/<path:path>")
 def webui_static(path):
     return send_from_directory("/opt/ninjaku/webui", path)
 
 if __name__ == "__main__":
-    app.run(host="127.0.0.1", port=8181)
+    app.run(host="0.0.0.0", port=8181)
