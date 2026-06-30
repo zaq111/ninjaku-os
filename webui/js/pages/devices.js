@@ -16,13 +16,15 @@ Pages.devices = {
   subtitle: 'LAN clients, profiles and effective policies.',
 
   async render() {
-    const [data, profilesData] = await Promise.all([
+    const [data, profilesData, leasesData] = await Promise.all([
       NinjakuAPI.get('/devices'),
-      NinjakuAPI.get('/profiles')
+      NinjakuAPI.get('/profiles'),
+      NinjakuAPI.get('/leases')
     ]);
 
     DeviceActions.devices = data.devices || [];
     DeviceActions.profiles = profilesData.profiles || [];
+    DeviceActions.leases = leasesData.leases || [];
 
     const devices = DeviceActions.devices;
     const online = devices.filter(d => d.status === 'online').length;
@@ -103,6 +105,9 @@ window.DeviceActions = {
               <label>Profile</label>
               <select id="edit-profile">${profileOptions}</select>
 
+              <label>Reserved IP</label>
+              <input id="edit-reserved-ip" value="${escapeHtml((DeviceActions.leases.find(l => l.mac === d.mac) || {}).ip || d.ip || '')}" placeholder="192.168.10.150">
+
               <label>Notes</label>
               <textarea id="edit-notes" placeholder="Device notes">${escapeHtml(d.notes || '')}</textarea>
             </div>
@@ -124,11 +129,16 @@ window.DeviceActions = {
   async save(mac) {
     const alias = document.getElementById('edit-alias').value.trim();
     const profile = document.getElementById('edit-profile').value;
+    const reservedIp = document.getElementById('edit-reserved-ip').value.trim();
     const notes = document.getElementById('edit-notes').value.trim();
 
     await NinjakuAPI.post('/devices/' + encodeURIComponent(mac) + '/alias', { alias });
     await NinjakuAPI.post('/devices/' + encodeURIComponent(mac) + '/profile', { profile });
     await NinjakuAPI.post('/devices/' + encodeURIComponent(mac) + '/notes', { notes });
+
+    if (reservedIp) {
+      await NinjakuAPI.post('/leases', { mac, ip: reservedIp, hostname: alias || mac.replaceAll(':', '-') });
+    }
 
     this.closeModal();
     UI.toast('success', 'Device updated', 'Alias, profile and notes were saved.');
