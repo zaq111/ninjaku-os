@@ -171,6 +171,26 @@ def update_device(mac, field, value):
         "policy_applied": apply_result,
     }
 
+
+def cleanup_wan():
+    # Untuk v1, LAN subnet diambil dari router.lan_ip, contoh 192.168.10.1/24.
+    # Kita ambil prefix sederhana: 192.168.10.
+    lan_ip = get("router.lan_ip", "192.168.10.1/24").split("/")[0]
+    prefix = ".".join(lan_ip.split(".")[:3]) + "."
+
+    with connect() as db:
+        cur = db.execute(
+            "DELETE FROM devices WHERE ip != '' AND ip NOT LIKE ?",
+            (prefix + "%",)
+        )
+        deleted = cur.rowcount
+
+    return {
+        "ok": True,
+        "deleted": deleted,
+        "lan_prefix": prefix,
+    }
+
 def status():
     sync()
     devices = list_devices()
@@ -181,6 +201,8 @@ def execute(command, **kwargs):
         return status()
     if command == "sync":
         return sync()
+    if command == "cleanup-wan":
+        return cleanup_wan()
     if command == "set-alias":
         return update_device(kwargs["mac"], "alias", kwargs["value"])
     if command == "set-notes":

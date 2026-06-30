@@ -148,7 +148,15 @@ def cmd_devices(args=None):
     if args and args[0] == "sync":
         r = execute("devices", "sync")
         print("Devices sync:", "OK" if r.get("ok") else "FAILED")
-        print(f"Lease count : {r.get('count', 0)}")
+        print(f"Lease count : {r.get('lease_count', r.get('count', 0))}")
+        print(f"Neighbor count : {r.get('neighbor_count', 0)}")
+        return
+
+    if args and args[0] == "cleanup-wan":
+        r = execute("devices", "cleanup-wan")
+        print("Cleanup WAN devices:", "OK" if r.get("ok") else "FAILED")
+        print(f"LAN prefix : {r.get('lan_prefix')}")
+        print(f"Deleted    : {r.get('deleted')}")
         return
 
     if args and args[0] in ("set-alias", "set-notes", "set-profile"):
@@ -389,7 +397,7 @@ def cmd_help():
     print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down|enable|disable]")
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku config [list|set]")
-    print("  ninjaku devices [sync|set-alias|set-notes|set-profile]")
+    print("  ninjaku devices [sync|cleanup-wan|set-alias|set-notes|set-profile]")
     print("  ninjaku profiles [add|delete]")
     print("  ninjaku policy [set|resolve|apply]")
     print("  ninjaku help")
