@@ -59,6 +59,8 @@ def build_config():
 
     return f"""\
 # Ninjaku OS Router LAN DHCP
+# DHCP only. DNS is handled by AdGuard Home.
+port=0
 interface={cfg("dhcp.interface")}
 bind-interfaces
 
