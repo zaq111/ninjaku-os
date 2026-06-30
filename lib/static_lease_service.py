@@ -1,6 +1,7 @@
 from lib.db import connect
 from lib.system import run
 from lib.settings import get
+from lib import dhcp_service
 
 CONF = "/etc/dnsmasq.d/ninjaku-static-leases.conf"
 
@@ -103,10 +104,12 @@ def apply():
     with open(CONF, "w") as f:
         f.write(build_config())
 
-    r = run(["systemctl", "restart", "dnsmasq"])
+    r = dhcp_service.reload_dnsmasq("static_leases_apply")
 
     return {
         "ok": r["ok"],
+        "skipped": r.get("skipped", False),
+        "state": r.get("state"),
         "stdout": r["stdout"],
         "stderr": r["stderr"],
         "conf": CONF,

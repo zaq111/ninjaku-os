@@ -23,6 +23,37 @@ def ensure_defaults():
         if get(k) is None:
             set(k, v)
 
+
+def interface_exists(ifname):
+    return run(["ip", "link", "show", ifname])["ok"]
+
+def reload_dnsmasq(reason="reload"):
+    ensure_defaults()
+    iface = cfg("dhcp.interface")
+
+    if not interface_exists(iface):
+        return {
+            "ok": True,
+            "skipped": True,
+            "state": "waiting_for_lan",
+            "reason": reason,
+            "interface": iface,
+            "stdout": "",
+            "stderr": f"interface {iface} not found; dnsmasq reload skipped",
+        }
+
+    r = run(["systemctl", "restart", "dnsmasq"])
+
+    return {
+        "ok": r["ok"],
+        "skipped": False,
+        "state": "reloaded" if r["ok"] else "error",
+        "reason": reason,
+        "interface": iface,
+        "stdout": r["stdout"],
+        "stderr": r["stderr"],
+    }
+
 def build_config():
     ensure_defaults()
 
@@ -57,12 +88,14 @@ def start():
         f.write(build_config())
 
     run(["systemctl", "enable", "dnsmasq"])
-    r = run(["systemctl", "restart", "dnsmasq"])
+    r = reload_dnsmasq("dhcp_start")
 
-    if r["ok"]:
+    if r["ok"] and not r.get("skipped"):
         set("dhcp.enabled", "true")
+    elif r.get("skipped"):
+        set("dhcp.enabled", "false")
 
-    return {"ok": r["ok"], "stdout": r["stdout"], "stderr": r["stderr"]}
+    return r
 
 def stop():
     r = run(["systemctl", "stop", "dnsmasq"])
