@@ -5,8 +5,31 @@ Pages.qos = {
   subtitle: 'Ninjaku traffic shaping powered by CAKE and IFB.',
 
   async render() {
-    const data = await NinjakuAPI.get('/qos');
+    const [data, pipesData] = await Promise.all([
+      NinjakuAPI.get('/qos'),
+      NinjakuAPI.get('/qos/pipes')
+    ]);
+
     const c = data.config || {};
+    QosPipeActions.pipes = pipesData.pipes || [];
+
+    const pipeCards = QosPipeActions.pipes.map(p => `
+      <div class="pipe-card">
+        <div>
+          <strong>${escapeHtml(p.name)}</strong>
+          <span>${escapeHtml(p.description || p.id)}</span>
+        </div>
+        <div class="pipe-rate">
+          <b>↓ ${escapeHtml(p.download)}</b>
+          <b>↑ ${escapeHtml(p.upload)}</b>
+        </div>
+        <div class="pipe-actions">
+          ${UI.badge(p.priority, p.priority === 'high' ? 'green' : (p.priority === 'low' ? 'orange' : 'blue'))}
+          <button class="soft-button" onclick="QosPipeActions.edit('${escapeHtml(p.id)}')">Edit</button>
+          <button class="danger-button" onclick="QosPipeActions.remove('${escapeHtml(p.id)}')">Delete</button>
+        </div>
+      </div>
+    `).join('');
 
     return `
       <section class="grid grid-4" style="margin-bottom:18px">
@@ -42,6 +65,12 @@ Pages.qos = {
         <button class="primary-button" onclick="QosActions.saveApply()">Save & Apply</button>
         <button class="danger-button" onclick="QosActions.disable()">Disable QoS</button>
       `)}
+
+      ${UI.panel('Pipes', `
+        <div class="pipe-grid">
+          ${pipeCards || UI.empty('No pipes', 'Create a QoS pipe to reuse bandwidth settings.')}
+        </div>
+      `, `<button class="primary-button" onclick="QosPipeActions.create()">Add Pipe</button>`)}
 
       ${UI.panel('WAN qdisc', `<pre>${escapeHtml(data.wan_qdisc || 'No qdisc data')}</pre>`)}
       ${UI.panel('IFB Download qdisc', `<pre>${escapeHtml(data.ifb_qdisc || 'No IFB qdisc data')}</pre>`)}
@@ -91,6 +120,115 @@ window.QosActions = {
 
     await NinjakuAPI.post('/qos/disable');
     UI.toast('success', 'QoS disabled', 'Traffic shaping was removed.');
+    await Ninjaku.navigate('qos');
+  }
+};
+
+
+window.QosPipeActions = {
+  pipes: [],
+
+  create() {
+    this.openForm({
+      id: '',
+      name: '',
+      download: '20mbit',
+      upload: '5mbit',
+      priority: 'normal',
+      description: ''
+    });
+  },
+
+  edit(id) {
+    const pipe = this.pipes.find(p => p.id === id);
+    if (!pipe) return UI.toast('error', 'Pipe not found', id);
+    this.openForm(pipe);
+  },
+
+  openForm(pipe) {
+    let root = document.getElementById('modal-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'modal-root';
+      document.body.appendChild(root);
+    }
+
+    root.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal">
+          <div class="modal-head"><h3>${pipe.id ? 'Edit Pipe' : 'Add Pipe'}</h3></div>
+          <div class="modal-body">
+            <div class="form-stack">
+              <label>ID</label>
+              <input id="pipe-id" value="${escapeHtml(pipe.id || '')}" placeholder="guest" ${pipe.id ? 'readonly' : ''}>
+
+              <label>Name</label>
+              <input id="pipe-name" value="${escapeHtml(pipe.name || '')}" placeholder="Guest">
+
+              <label>Download</label>
+              <input id="pipe-download" value="${escapeHtml(pipe.download || '20mbit')}" placeholder="20mbit">
+
+              <label>Upload</label>
+              <input id="pipe-upload" value="${escapeHtml(pipe.upload || '5mbit')}" placeholder="5mbit">
+
+              <label>Priority</label>
+              <select id="pipe-priority">
+                <option value="low" ${pipe.priority === 'low' ? 'selected' : ''}>low</option>
+                <option value="normal" ${pipe.priority === 'normal' ? 'selected' : ''}>normal</option>
+                <option value="high" ${pipe.priority === 'high' ? 'selected' : ''}>high</option>
+              </select>
+
+              <label>Description</label>
+              <textarea id="pipe-description">${escapeHtml(pipe.description || '')}</textarea>
+            </div>
+          </div>
+          <div class="modal-actions">
+            <button class="soft-button" onclick="QosPipeActions.close()">Cancel</button>
+            <button class="primary-button" onclick="QosPipeActions.save()">Save Pipe</button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  close() {
+    const root = document.getElementById('modal-root');
+    if (root) root.innerHTML = '';
+  },
+
+  async save() {
+    const data = {
+      id: document.getElementById('pipe-id').value.trim(),
+      name: document.getElementById('pipe-name').value.trim(),
+      download: document.getElementById('pipe-download').value.trim(),
+      upload: document.getElementById('pipe-upload').value.trim(),
+      priority: document.getElementById('pipe-priority').value,
+      description: document.getElementById('pipe-description').value.trim()
+    };
+
+    if (!data.id || !data.name) {
+      UI.toast('error', 'Missing data', 'Pipe ID and Name are required.');
+      return;
+    }
+
+    await NinjakuAPI.post('/qos/pipes', data);
+    this.close();
+    UI.toast('success', 'Pipe saved', 'QoS pipe was saved.');
+    await Ninjaku.navigate('qos');
+  },
+
+  async remove(id) {
+    const ok = await UI.confirm({
+      title: 'Delete QoS Pipe?',
+      message: 'This pipe will be removed. Do not delete pipes that are still used by policies.',
+      confirmText: 'Delete',
+      danger: true
+    });
+
+    if (!ok) return;
+
+    await NinjakuAPI.delete('/qos/pipes/' + encodeURIComponent(id));
+    UI.toast('success', 'Pipe deleted', 'QoS pipe was removed.');
     await Ninjaku.navigate('qos');
   }
 };

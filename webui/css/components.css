@@ -539,3 +539,57 @@ textarea:focus {
     grid-template-columns: 1fr;
   }
 }
+
+.pipe-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pipe-card {
+  background: var(--surface-soft);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 16px;
+  display: grid;
+  gap: 12px;
+}
+
+.pipe-card strong {
+  display: block;
+  font-size: 16px;
+}
+
+.pipe-card span {
+  display: block;
+  color: var(--muted);
+  font-size: 13px;
+  margin-top: 4px;
+}
+
+.pipe-rate {
+  display: flex;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.pipe-rate b {
+  background: var(--surface);
+  border: 1px solid var(--border);
+  padding: 7px 10px;
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.pipe-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+@media (max-width: 900px) {
+  .pipe-grid {
+    grid-template-columns: 1fr;
+  }
+}
