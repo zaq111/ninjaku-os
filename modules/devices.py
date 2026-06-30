@@ -172,6 +172,23 @@ def update_device(mac, field, value):
     }
 
 
+
+def mark_offline(minutes=5):
+    with connect() as db:
+        cur = db.execute("""
+            UPDATE devices
+            SET status='offline'
+            WHERE status='online'
+              AND datetime(last_seen) < datetime('now', ?)
+        """, (f"-{int(minutes)} minutes",))
+        changed = cur.rowcount
+
+    return {
+        "ok": True,
+        "changed": changed,
+        "minutes": minutes,
+    }
+
 def cleanup_wan():
     # Untuk v1, LAN subnet diambil dari router.lan_ip, contoh 192.168.10.1/24.
     # Kita ambil prefix sederhana: 192.168.10.
@@ -203,6 +220,8 @@ def execute(command, **kwargs):
         return sync()
     if command == "cleanup-wan":
         return cleanup_wan()
+    if command == "mark-offline":
+        return mark_offline(int(kwargs.get("minutes", 5)))
     if command == "set-alias":
         return update_device(kwargs["mac"], "alias", kwargs["value"])
     if command == "set-notes":

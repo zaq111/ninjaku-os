@@ -159,6 +159,14 @@ def cmd_devices(args=None):
         print(f"Deleted    : {r.get('deleted')}")
         return
 
+    if args and args[0] == "mark-offline":
+        minutes = int(args[1]) if len(args) > 1 else 5
+        r = execute("devices", "mark-offline", minutes=minutes)
+        print("Mark offline:", "OK" if r.get("ok") else "FAILED")
+        print(f"Threshold : {r.get('minutes')} minutes")
+        print(f"Changed   : {r.get('changed')}")
+        return
+
     if args and args[0] in ("set-alias", "set-notes", "set-profile"):
         if len(args) < 3:
             print(f"Usage: ninjaku devices {args[0]} <mac> <value>")
@@ -397,7 +405,7 @@ def cmd_help():
     print("  ninjaku router [status|lan-up|forward-on|nat-up|nat-down|enable|disable]")
     print("  ninjaku dhcp [status|start|stop]")
     print("  ninjaku config [list|set]")
-    print("  ninjaku devices [sync|cleanup-wan|set-alias|set-notes|set-profile]")
+    print("  ninjaku devices [sync|cleanup-wan|mark-offline|set-alias|set-notes|set-profile]")
     print("  ninjaku profiles [add|delete]")
     print("  ninjaku policy [set|resolve|apply]")
     print("  ninjaku help")
