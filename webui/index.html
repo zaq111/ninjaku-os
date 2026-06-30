@@ -4,43 +4,75 @@
   <meta charset="utf-8">
   <title>Ninjaku OS Router</title>
   <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/reset.css">
   <link rel="stylesheet" href="/assets/css/theme.css">
   <link rel="stylesheet" href="/assets/css/layout.css">
+  <link rel="stylesheet" href="/assets/css/components.css">
 </head>
 <body>
-  <div class="app">
+  <div class="app-shell">
     <aside class="sidebar">
       <div class="brand">
-        <div class="logo">忍</div>
+        <div class="brand-logo">忍</div>
         <div>
-          <h1>Ninjaku OS</h1>
-          <p>Modular Router Platform</p>
+          <div class="brand-title">Ninjaku OS</div>
+          <div class="brand-subtitle">Router Platform</div>
         </div>
       </div>
 
-      <nav id="sidebar-menu"></nav>
+      <nav id="sidebar-menu" class="sidebar-menu"></nav>
+
+      <div class="sidebar-card">
+        <div class="dot green"></div>
+        <div>
+          <strong>Router</strong>
+          <span id="sidebar-router-state">Loading</span>
+        </div>
+      </div>
+
+      <div class="user-card">
+        <div class="avatar">A</div>
+        <div>
+          <strong>admin</strong>
+          <span>Administrator</span>
+        </div>
+      </div>
     </aside>
 
-    <main>
+    <section class="workspace">
       <header class="topbar">
-        <div>
-          <h2 id="page-title">Overview</h2>
-          <p id="page-subtitle">Ninjaku OS Router 1.0 Alpha</p>
+        <div class="topbar-left">
+          <button class="icon-button" onclick="window.Ninjaku.toggleSidebar()">☰</button>
+          <div>
+            <h1 id="page-title">Overview</h1>
+            <p id="page-subtitle">Ninjaku OS Router 1.0 Alpha</p>
+          </div>
         </div>
-        <button onclick="window.Ninjaku.refresh()">Refresh</button>
+
+        <div class="topbar-right">
+          <span class="version">Ninjaku OS 1.0.0-alpha</span>
+          <span class="online-dot"></span>
+          <span class="online-text">Online</span>
+          <button class="icon-button" onclick="window.Ninjaku.refresh()">↻</button>
+          <button class="primary-button" onclick="window.Ninjaku.applyPolicy()">Apply Policy</button>
+        </div>
       </header>
 
-      <section id="content"></section>
-    </main>
+      <main id="content" class="content"></main>
+    </section>
   </div>
 
   <script src="/assets/js/api.js"></script>
+
+  <script src="/assets/js/components/ui.js"></script>
+
   <script src="/assets/js/pages/overview.js"></script>
   <script src="/assets/js/pages/router.js"></script>
   <script src="/assets/js/pages/devices.js"></script>
   <script src="/assets/js/pages/policy.js"></script>
   <script src="/assets/js/pages/profiles.js"></script>
   <script src="/assets/js/pages/settings.js"></script>
+
   <script src="/assets/js/app.js"></script>
 </body>
 </html>

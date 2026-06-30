@@ -1,0 +1,46 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <title>Ninjaku OS Router</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <link rel="stylesheet" href="/assets/css/theme.css">
+  <link rel="stylesheet" href="/assets/css/layout.css">
+</head>
+<body>
+  <div class="app">
+    <aside class="sidebar">
+      <div class="brand">
+        <div class="logo">忍</div>
+        <div>
+          <h1>Ninjaku OS</h1>
+          <p>Modular Router Platform</p>
+        </div>
+      </div>
+
+      <nav id="sidebar-menu"></nav>
+    </aside>
+
+    <main>
+      <header class="topbar">
+        <div>
+          <h2 id="page-title">Overview</h2>
+          <p id="page-subtitle">Ninjaku OS Router 1.0 Alpha</p>
+        </div>
+        <button onclick="window.Ninjaku.refresh()">Refresh</button>
+      </header>
+
+      <section id="content"></section>
+    </main>
+  </div>
+
+  <script src="/assets/js/api.js"></script>
+  <script src="/assets/js/pages/overview.js"></script>
+  <script src="/assets/js/pages/router.js"></script>
+  <script src="/assets/js/pages/devices.js"></script>
+  <script src="/assets/js/pages/policy.js"></script>
+  <script src="/assets/js/pages/profiles.js"></script>
+  <script src="/assets/js/pages/settings.js"></script>
+  <script src="/assets/js/app.js"></script>
+</body>
+</html>

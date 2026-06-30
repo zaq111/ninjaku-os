@@ -16,14 +16,14 @@ window.Ninjaku = {
     try {
       const data = await NinjakuAPI.get('/modules');
       this.menu = data.modules || [];
-    } catch {
+    } catch (err) {
       this.menu = [
-        { id: 'overview', title: 'Overview', page: 'overview' },
-        { id: 'router', title: 'Router', page: 'router' },
-        { id: 'devices', title: 'Devices', page: 'devices' },
-        { id: 'policy', title: 'Policy', page: 'policy' },
-        { id: 'profiles', title: 'Profiles', page: 'profiles' },
-        { id: 'settings', title: 'Settings', page: 'settings' }
+        { id: 'overview', title: 'Overview', page: 'overview', order: 0 },
+        { id: 'router', title: 'Router', page: 'router', order: 10 },
+        { id: 'devices', title: 'Devices', page: 'devices', order: 20 },
+        { id: 'policy', title: 'Policy', page: 'policy', order: 30 },
+        { id: 'profiles', title: 'Profiles', page: 'profiles', order: 40 },
+        { id: 'settings', title: 'Settings', page: 'settings', order: 90 }
       ];
     }
 
@@ -32,15 +32,11 @@ window.Ninjaku = {
 
   renderMenu() {
     const nav = document.getElementById('sidebar-menu');
-    nav.innerHTML = this.menu.map(item => {
-      const page = item.page || item.id;
-      return `
-        <a href="#${page}" data-page="${page}">
-          <span>${UI.icon(item.icon || item.id)}</span>
-          <span>${escapeHtml(item.title || item.id)}</span>
-        </a>
-      `;
-    }).join('');
+    nav.innerHTML = this.menu.map(item => `
+      <a href="#${item.page || item.id}" data-page="${item.page || item.id}">
+        ${escapeHtml(item.title || item.id)}
+      </a>
+    `).join('');
   },
 
   async navigate(page, updateHash = true) {
@@ -52,7 +48,7 @@ window.Ninjaku = {
       return;
     }
 
-    document.querySelectorAll('.sidebar-menu a').forEach(a => {
+    document.querySelectorAll('nav a').forEach(a => {
       a.classList.toggle('active', a.dataset.page === page);
     });
 
@@ -60,34 +56,17 @@ window.Ninjaku = {
     document.getElementById('page-subtitle').textContent = Pages[page].subtitle || '';
 
     const content = document.getElementById('content');
-    content.innerHTML = UI.panel('Loading', '<p>Please wait...</p>');
+    content.innerHTML = '<section class="panel"><h3>Loading...</h3></section>';
 
     try {
       content.innerHTML = await Pages[page].render();
-      await this.updateSidebarState();
     } catch (err) {
-      content.innerHTML = UI.panel('Error', `<p class="fail">${escapeHtml(err.message)}</p>`);
+      content.innerHTML = `<section class="panel"><h3 class="fail">Error</h3><p>${escapeHtml(err.message)}</p></section>`;
     }
-  },
-
-  async updateSidebarState() {
-    try {
-      const r = await NinjakuAPI.get('/router');
-      document.getElementById('sidebar-router-state').textContent = r.state || 'unknown';
-    } catch {}
   },
 
   async refresh() {
     await this.navigate(this.currentPage, false);
-  },
-
-  async applyPolicy() {
-    await NinjakuAPI.post('/policy/apply');
-    await this.refresh();
-  },
-
-  toggleSidebar() {
-    document.querySelector('.app-shell').classList.toggle('sidebar-open');
   }
 };
 

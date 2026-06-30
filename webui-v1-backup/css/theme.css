@@ -1,0 +1,14 @@
+:root {
+  --bg: #0b1020;
+  --sidebar: #070b16;
+  --panel: #10182b;
+  --panel2: #070b16;
+  --border: #1f2a46;
+  --text: #e8eefc;
+  --muted: #8fa0c2;
+  --primary: #2f6bff;
+  --danger: #dc3545;
+  --ok: #55e69c;
+  --warn: #ffd166;
+  --fail: #ff6b6b;
+}

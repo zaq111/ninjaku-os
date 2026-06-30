@@ -4,8 +4,13 @@ window.NinjakuAPI = {
       headers: { 'Content-Type': 'application/json' },
       ...options
     });
+
     const json = await res.json();
-    if (!json.success) throw new Error(json.error?.message || 'API error');
+
+    if (!json.success) {
+      throw new Error(json.error?.message || 'API error');
+    }
+
     return json.data;
   },
 
@@ -27,12 +32,26 @@ window.NinjakuAPI = {
 
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>"']/g, m => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;'
+    '&': '&amp;',
+    '<': '&lt;',
+    '>': '&gt;',
+    '"': '&quot;',
+    "'": '&#039;'
   }[m]));
 }
 
+function statusColor(value) {
+  const v = String(value || '').toLowerCase();
+  if (['running', 'active', 'ok', 'online', 'connected', 'healthy', 'true', '1'].includes(v)) return 'green';
+  if (['waiting_for_lan', 'unknown', 'inactive', 'restoring'].includes(v)) return 'orange';
+  if (['failed', 'offline', 'error', 'down'].includes(v)) return 'red';
+  return 'blue';
+}
+
 function statusClass(value) {
-  if (['running','active','ok','true','1'].includes(String(value).toLowerCase())) return 'ok';
-  if (['waiting_for_lan','inactive','unknown','failed'].includes(String(value).toLowerCase())) return 'warn';
+  const c = statusColor(value);
+  if (c === 'green') return 'ok';
+  if (c === 'orange') return 'warn';
+  if (c === 'red') return 'fail';
   return '';
 }
