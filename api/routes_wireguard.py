@@ -1,4 +1,4 @@
-from flask import Blueprint, request
+from flask import Blueprint, request, Response
 from lib.modules import execute
 from api.common import ok, fail
 
@@ -86,3 +86,12 @@ def api_wireguard_peer_config(peer_id):
 def api_wireguard_peer_qr(peer_id):
     endpoint_host = request.args.get("endpoint", "")
     return ok(execute("wireguard", "export-peer-qr", id=peer_id, endpoint_host=endpoint_host))
+
+
+@wireguard_bp.get("/api/v1/wireguard/peers/<peer_id>/qr.svg")
+def api_wireguard_peer_qr_svg(peer_id):
+    endpoint_host = request.args.get("endpoint", "")
+    r = execute("wireguard", "export-peer-qr", id=peer_id, endpoint_host=endpoint_host)
+    if not r.get("ok"):
+        return Response(r.get("error", "QR error"), status=400, mimetype="text/plain")
+    return Response(r.get("svg", ""), mimetype="image/svg+xml")

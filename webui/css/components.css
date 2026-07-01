@@ -785,3 +785,8 @@ textarea:disabled {
   width: min(360px, 80vw);
   height: auto;
 }
+
+.wg-qr-box img {
+  width: min(360px, 80vw);
+  height: auto;
+}

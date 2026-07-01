@@ -273,13 +273,6 @@ window.WireGuardActions = {
   },
 
   async showQr(id) {
-    const r = await NinjakuAPI.get('/wireguard/peers/' + encodeURIComponent(id) + '/qr');
-
-    if (!r.ok) {
-      UI.toast('error', 'QR failed', r.error || 'Unable to generate QR code.');
-      return;
-    }
-
     let root = document.getElementById('modal-root');
     if (!root) {
       root = document.createElement('div');
@@ -287,12 +280,14 @@ window.WireGuardActions = {
       document.body.appendChild(root);
     }
 
+    const src = '/api/v1/wireguard/peers/' + encodeURIComponent(id) + '/qr.svg';
+
     root.innerHTML = `
       <div class="modal-backdrop">
         <div class="modal">
-          <div class="modal-head"><h3>WireGuard QR: ${escapeHtml(r.name || id)}</h3></div>
+          <div class="modal-head"><h3>WireGuard QR</h3></div>
           <div class="modal-body">
-            <div class="wg-qr-box">${r.svg || ''}</div>
+            <div class="wg-qr-box"><img src="${src}" alt="WireGuard QR"></div>
             <p class="muted">Scan this QR code using the WireGuard mobile app.</p>
           </div>
           <div class="modal-actions">
