@@ -17,6 +17,7 @@ ENDPOINTS = [
     ("POST",   "/api/v1/wireguard/stop"),
     ("POST",   "/api/v1/wireguard/restart"),
     ("GET",    "/api/v1/wireguard/peers/<peer_id>/config"),
+    ("GET",    "/api/v1/wireguard/peers/<peer_id>/qr"),
 ]
 
 @wireguard_bp.get("/api/v1/wireguard")
@@ -79,3 +80,9 @@ def api_wireguard_restart():
 def api_wireguard_peer_config(peer_id):
     endpoint_host = request.args.get("endpoint", "")
     return ok(execute("wireguard", "export-peer-config", id=peer_id, endpoint_host=endpoint_host))
+
+
+@wireguard_bp.get("/api/v1/wireguard/peers/<peer_id>/qr")
+def api_wireguard_peer_qr(peer_id):
+    endpoint_host = request.args.get("endpoint", "")
+    return ok(execute("wireguard", "export-peer-qr", id=peer_id, endpoint_host=endpoint_host))

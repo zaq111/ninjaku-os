@@ -563,3 +563,26 @@ def export_peer_config(peer_id, endpoint_host=""):
         "filename": f"{peer_id}.conf",
         "config": config,
     }
+
+def export_peer_qr_svg(peer_id, endpoint_host=""):
+    import io
+    import qrcode
+    import qrcode.image.svg
+
+    exported = export_peer_config(peer_id, endpoint_host)
+    if not exported.get("ok"):
+        return exported
+
+    factory = qrcode.image.svg.SvgImage
+    img = qrcode.make(exported["config"], image_factory=factory)
+
+    buf = io.BytesIO()
+    img.save(buf)
+
+    return {
+        "ok": True,
+        "id": exported["id"],
+        "name": exported["name"],
+        "filename": exported["filename"].replace(".conf", ".svg"),
+        "svg": buf.getvalue().decode("utf-8"),
+    }

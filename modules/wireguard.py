@@ -46,4 +46,10 @@ def execute(command, **kwargs):
             kwargs.get("endpoint_host", "")
         )
 
+    if command == "export-peer-qr":
+        return wireguard_service.export_peer_qr_svg(
+            kwargs.get("id", ""),
+            kwargs.get("endpoint_host", "")
+        )
+
     raise Exception(f"Unknown wireguard command: {command}")
