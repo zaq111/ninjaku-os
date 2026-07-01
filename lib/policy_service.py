@@ -121,7 +121,19 @@ def set_policy(profile, field, value):
     return {"ok": True, "profile": profile, "field": field, "value": value}
 
 def apply_policy():
-    return module_execute("firewall", "apply-policy")
+    firewall = module_execute("firewall", "apply-policy")
+
+    qos = None
+    try:
+        qos = module_execute("qos", "apply")
+    except Exception as e:
+        qos = {"ok": False, "error": str(e)}
+
+    return {
+        "ok": bool(firewall.get("ok", False)) and bool(qos.get("ok", False)),
+        "firewall": firewall,
+        "qos": qos,
+    }
 
 def resolve_policy(mac=None, profile=None):
     return resolve(mac=mac, profile=profile)

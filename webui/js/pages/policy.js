@@ -15,6 +15,10 @@ Pages.policy = {
 
     const rows = PolicyActions.policies.map(p => {
       const devices = PolicyActions.devices.filter(d => (d.profile || 'default') === p.profile);
+      const profileOptions = PolicyActions.policies.map(x =>
+        `<option value="${escapeHtml(x.profile)}" ${x.profile === p.profile ? 'selected' : ''}>${escapeHtml(x.profile)}</option>`
+      ).join('');
+
       const deviceRows = devices.map(d => `
         <tr class="policy-device-row">
           <td></td>
@@ -22,7 +26,11 @@ Pages.policy = {
           <td>${escapeHtml(d.ip || '-')}</td>
           <td>${escapeHtml(d.mac || '-')}</td>
           <td>${UI.badge(d.status || 'unknown', statusColor(d.status))}</td>
-          <td>${escapeHtml(d.policy_bandwidth || '-')}</td>
+          <td>
+            <select class="mini-select" onchange="PolicyActions.moveDevice('${escapeHtml(d.mac)}', this.value)">
+              ${profileOptions}
+            </select>
+          </td>
           <td></td>
         </tr>
       `).join('');
@@ -69,6 +77,12 @@ window.PolicyActions = {
 
     body.classList.toggle('hidden');
     if (btn) btn.textContent = body.classList.contains('hidden') ? '+' : '−';
+  },
+
+  async moveDevice(mac, profile) {
+    await NinjakuAPI.post('/devices/' + encodeURIComponent(mac) + '/profile', { profile });
+    UI.toast('success', 'Device moved', 'Device profile was updated.');
+    await Ninjaku.navigate('policy');
   },
 
   edit(profile) {
@@ -165,7 +179,6 @@ window.PolicyActions = {
 
   async apply() {
     await NinjakuAPI.post('/policy/apply');
-    await NinjakuAPI.post('/qos/apply');
     UI.toast('success', 'Policy applied', 'Firewall and QoS policy were refreshed.');
     await Ninjaku.navigate('policy');
   }

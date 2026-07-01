@@ -700,3 +700,10 @@ textarea:disabled {
 .policy-device-row strong {
   color: var(--text);
 }
+
+.mini-select {
+  height: 34px;
+  padding: 6px 10px;
+  border-radius: 10px;
+  font-size: 12px;
+}
