@@ -102,9 +102,19 @@ window.ProfileActions = {
       qos_priority: document.getElementById('profile-qos-priority').value
     };
 
-    await NinjakuAPI.post('/profiles/' + encodeURIComponent(name), data);
+    await NinjakuAPI.post('/profiles/' + encodeURIComponent(name), {
+      description: data.description
+    });
+
+    await NinjakuAPI.post('/policy/' + encodeURIComponent(name), {
+      qos_enabled: data.qos_enabled,
+      qos_download: data.qos_download,
+      qos_upload: data.qos_upload,
+      qos_priority: data.qos_priority
+    });
+
     this.close();
-    UI.toast('success', 'Profile saved', 'Profile QoS settings were updated.');
+    UI.toast('success', 'Profile saved', 'Profile policy and QoS settings were updated.');
     await Ninjaku.navigate('profiles');
   }
 };
