@@ -486,3 +486,80 @@ def stop():
 def restart():
     stop()
     return apply()
+
+def raw_peer(peer_id):
+    ensure_tables()
+    peer_id = normalize_id(peer_id)
+    with connect() as db:
+        return db.execute("""
+            SELECT id, name, enabled, private_key, public_key, preshared_key,
+                   allowed_ips, endpoint, persistent_keepalive, description
+            FROM wireguard_peers
+            WHERE id=?
+        """, (peer_id,)).fetchone()
+
+def export_peer_config(peer_id, endpoint_host=""):
+    ensure_tables()
+    peer_id = normalize_id(peer_id)
+
+    s = raw_server()
+    p = raw_peer(peer_id)
+
+    if not s:
+        return {"ok": False, "error": "server config not found"}
+    if not p:
+        return {"ok": False, "error": "peer not found"}
+
+    interface, listen_port, server_address, server_private, dns, mtu = s
+    peer_id, name, enabled, peer_private, peer_public, psk, allowed_ips, endpoint, keepalive, desc = p
+
+    server = status()["server"]
+    server_public = server.get("public_key", "")
+
+    if not server_public:
+        return {"ok": False, "error": "server public key missing"}
+    if not peer_private:
+        return {"ok": False, "error": "peer private key missing"}
+    if not allowed_ips:
+        return {"ok": False, "error": "peer allowed IP missing"}
+
+    if not endpoint_host:
+        endpoint_host = endpoint or "YOUR_PUBLIC_IP_OR_DDNS"
+
+    endpoint_value = f"{endpoint_host}:{listen_port}" if ":" not in endpoint_host else endpoint_host
+
+    lines = [
+        "[Interface]",
+        f"PrivateKey = {peer_private}",
+        f"Address = {allowed_ips}",
+    ]
+
+    if dns:
+        lines.append(f"DNS = {dns}")
+    if mtu:
+        lines.append(f"MTU = {mtu}")
+
+    lines += [
+        "",
+        "[Peer]",
+        f"PublicKey = {server_public}",
+    ]
+
+    if psk:
+        lines.append(f"PresharedKey = {psk}")
+
+    lines += [
+        "AllowedIPs = 0.0.0.0/0",
+        f"Endpoint = {endpoint_value}",
+        f"PersistentKeepalive = {keepalive or '25'}",
+    ]
+
+    config = "\n".join(lines).strip() + "\n"
+
+    return {
+        "ok": True,
+        "id": peer_id,
+        "name": name,
+        "filename": f"{peer_id}.conf",
+        "config": config,
+    }

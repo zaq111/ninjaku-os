@@ -40,4 +40,10 @@ def execute(command, **kwargs):
     if command == "restart":
         return wireguard_service.restart()
 
+    if command == "export-peer-config":
+        return wireguard_service.export_peer_config(
+            kwargs.get("id", ""),
+            kwargs.get("endpoint_host", "")
+        )
+
     raise Exception(f"Unknown wireguard command: {command}")
