@@ -119,3 +119,29 @@ UI.confirm = function({ title = 'Confirm action', message = '', confirmText = 'C
     };
   });
 };
+
+UI.busy = {
+  show(title = 'Processing...', message = 'Please wait.') {
+    let root = document.getElementById('busy-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'busy-root';
+      document.body.appendChild(root);
+    }
+
+    root.innerHTML = `
+      <div class="busy-backdrop">
+        <div class="busy-box">
+          <div class="busy-spinner"></div>
+          <h3>${escapeHtml(title)}</h3>
+          <p>${escapeHtml(message)}</p>
+        </div>
+      </div>
+    `;
+  },
+
+  hide() {
+    const root = document.getElementById('busy-root');
+    if (root) root.innerHTML = '';
+  }
+};

@@ -790,3 +790,47 @@ textarea:disabled {
   width: min(360px, 80vw);
   height: auto;
 }
+
+.busy-backdrop {
+  position: fixed;
+  inset: 0;
+  z-index: 9999;
+  background: rgba(15, 23, 42, .35);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  backdrop-filter: blur(3px);
+}
+
+.busy-box {
+  width: min(420px, calc(100vw - 40px));
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 22px;
+  padding: 28px;
+  box-shadow: var(--shadow-lg);
+  text-align: center;
+}
+
+.busy-spinner {
+  width: 42px;
+  height: 42px;
+  border-radius: 999px;
+  border: 4px solid var(--border);
+  border-top-color: var(--primary);
+  animation: busy-spin .8s linear infinite;
+  margin: 0 auto 16px;
+}
+
+.busy-box h3 {
+  margin: 0 0 8px;
+}
+
+.busy-box p {
+  margin: 0;
+  color: var(--muted);
+}
+
+@keyframes busy-spin {
+  to { transform: rotate(360deg); }
+}

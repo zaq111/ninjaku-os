@@ -52,9 +52,12 @@ window.TailscaleActions = {
   },
 
   async up() {
+    UI.busy.show('Connecting to Tailscale...', 'Generating login URL. This may take a few seconds.');
     const r = await NinjakuAPI.post('/tailscale/up', { args: [] });
+    UI.busy.hide();
 
     if (r.login_url) {
+      UI.toast('success', 'Login URL generated', 'Open the URL to authorize this router.');
       let root = document.getElementById('modal-root');
       if (!root) {
         root = document.createElement('div');

@@ -54,11 +54,11 @@ def up(extra_args=None):
     if not installed():
         return {"ok": False, "error": "tailscale is not installed"}
 
-    args = ["tailscale", "up"]
+    args = ["tailscale", "up", "--timeout=5s"]
     if extra_args:
         args += extra_args
 
-    r = run(args)
+    r = run(args, timeout=15)
     combined = (r["stdout"] or "") + "\n" + (r["stderr"] or "")
     return {
         "ok": r["ok"],
@@ -86,14 +86,35 @@ def install():
     if installed():
         return {"ok": True, "already_installed": True, "status": status()}
 
-    r = run(["sh", "-c", "curl -fsSL https://tailscale.com/install.sh | sh"])
+    cmds = [
+        ["apt-get", "update"],
+        ["apt-get", "-y", "install", "curl", "ca-certificates", "gnupg"],
+        ["sh", "-c", "mkdir -p /usr/share/keyrings"],
+        ["sh", "-c", "curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.noarmor.gpg -o /usr/share/keyrings/tailscale-archive-keyring.gpg"],
+        ["sh", "-c", "curl -fsSL https://pkgs.tailscale.com/stable/debian/trixie.tailscale-keyring.list -o /etc/apt/sources.list.d/tailscale.list"],
+        ["apt-get", "update"],
+        ["apt-get", "-y", "install", "tailscale"],
+        ["systemctl", "enable", "--now", "tailscaled"],
+    ]
 
-    if r["ok"]:
-        run(["systemctl", "enable", "--now", "tailscaled"])
+    logs = []
+    ok_all = True
+
+    for cmd in cmds:
+        timeout = 600 if cmd[0] in ("apt-get",) else 120
+        r = run(cmd, timeout=timeout)
+        logs.append({
+            "cmd": " ".join(cmd),
+            "ok": r["ok"],
+            "stdout": r["stdout"][-2000:],
+            "stderr": r["stderr"][-2000:],
+        })
+        if not r["ok"]:
+            ok_all = False
+            break
 
     return {
-        "ok": r["ok"],
-        "stdout": r["stdout"],
-        "stderr": r["stderr"],
+        "ok": ok_all,
+        "logs": logs,
         "status": status(),
     }
