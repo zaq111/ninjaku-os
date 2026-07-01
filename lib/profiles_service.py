@@ -1,5 +1,7 @@
 from lib.db import connect
 from lib.modules import execute as module_execute
+from lib import policy_service
+from lib.policy import resolve
 
 SYSTEM_PROFILES = {"default", "staff", "guest", "blocked"}
 
@@ -57,15 +59,20 @@ def list_profiles():
         """)
         rows = cur.fetchall()
 
-    return [{
-        "name": r[0],
-        "description": r[1],
-        "is_system": bool(r[2]),
-        "qos_enabled": bool(r[3]),
-        "qos_download": r[4],
-        "qos_upload": r[5],
-        "qos_priority": r[6],
-    } for r in rows]
+    result = []
+    for r in rows:
+        policy = resolve(profile=r[0])
+        result.append({
+            "name": r[0],
+            "description": r[1],
+            "is_system": bool(r[2]),
+            "qos_enabled": bool(policy.get("qos_enabled")),
+            "qos_download": policy.get("qos_download", ""),
+            "qos_upload": policy.get("qos_upload", ""),
+            "qos_priority": policy.get("qos_priority", "normal"),
+        })
+
+    return result
 
 def add_profile(name, description=""):
     ensure_table()
@@ -131,6 +138,10 @@ def update_profile(name, data):
             "UPDATE profiles SET " + ", ".join(fields) + " WHERE name=?",
             values
         )
+
+    for k in ("qos_enabled", "qos_download", "qos_upload", "qos_priority"):
+        if k in data:
+            policy_service.set_policy(name, k, data[k])
 
     apply_result = None
     try:

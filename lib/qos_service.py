@@ -84,25 +84,24 @@ def cake_args(rate, direction):
 
 def profile_dscp_rules():
     from lib.device_service import list_devices
-    from lib.profiles_service import list_profiles
+    from lib.policy import resolve
 
-    profiles = {p["name"]: p for p in list_profiles()}
     devices = list_devices()
-
     rules = []
 
     for d in devices:
         ip = d.get("ip")
         profile_name = d.get("profile") or "default"
-        profile = profiles.get(profile_name, {})
 
         if not ip:
             continue
 
-        if not profile.get("qos_enabled"):
+        policy = resolve(profile=profile_name)
+
+        if not policy.get("qos_enabled"):
             continue
 
-        priority = profile.get("qos_priority", "normal")
+        priority = policy.get("qos_priority", "normal")
 
         if priority == "high":
             dscp = "cs5"
@@ -114,7 +113,6 @@ def profile_dscp_rules():
         rules.append((ip, dscp, profile_name))
 
     return rules
-
 
 def apply_dscp_marks():
     # Minimal DSCP marking for CAKE diffserv4.

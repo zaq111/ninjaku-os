@@ -47,6 +47,17 @@ def ensure_table():
             )
         """)
 
+        cols = [r[1] for r in db.execute("PRAGMA table_info(policies)").fetchall()]
+        extra_cols = {
+            "qos_enabled": "INTEGER DEFAULT 0",
+            "qos_download": "TEXT DEFAULT ''",
+            "qos_upload": "TEXT DEFAULT ''",
+            "qos_priority": "TEXT DEFAULT 'normal'",
+        }
+        for col, spec in extra_cols.items():
+            if col not in cols:
+                db.execute(f"ALTER TABLE policies ADD COLUMN {col} {spec}")
+
         for profile, p in DEFAULT_POLICIES.items():
             db.execute("""
                 INSERT OR IGNORE INTO policies
@@ -66,7 +77,8 @@ def list_policies():
 
     with connect() as db:
         cur = db.execute("""
-            SELECT profile, internet, bandwidth, dns_filter, schedule, priority, updated_at
+            SELECT profile, internet, bandwidth, dns_filter, schedule, priority,
+                   qos_enabled, qos_download, qos_upload, qos_priority, updated_at
             FROM policies
             ORDER BY profile
         """)
@@ -79,15 +91,25 @@ def list_policies():
         "dns_filter": r[3],
         "schedule": r[4],
         "priority": r[5],
-        "updated_at": r[6],
+        "qos_enabled": bool(r[6]),
+        "qos_download": r[7],
+        "qos_upload": r[8],
+        "qos_priority": r[9],
+        "updated_at": r[10],
     } for r in rows]
 
 def set_policy(profile, field, value):
     ensure_table()
 
-    allowed = {"internet", "bandwidth", "dns_filter", "schedule", "priority"}
+    allowed = {
+        "internet", "bandwidth", "dns_filter", "schedule", "priority",
+        "qos_enabled", "qos_download", "qos_upload", "qos_priority"
+    }
     if field not in allowed:
         return {"ok": False, "error": "field not allowed"}
+
+    if field == "qos_enabled":
+        value = 1 if str(value).lower() in ("1", "true", "yes", "on") else 0
 
     with connect() as db:
         db.execute("INSERT OR IGNORE INTO policies(profile) VALUES(?)", (profile,))

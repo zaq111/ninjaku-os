@@ -7,6 +7,10 @@ DEFAULT_POLICY = {
     "dns_filter": "none",
     "schedule": "always",
     "priority": "normal",
+    "qos_enabled": False,
+    "qos_download": "",
+    "qos_upload": "",
+    "qos_priority": "normal",
 }
 
 def resolve(mac=None, profile=None):
@@ -31,7 +35,8 @@ def resolve(mac=None, profile=None):
                 selected_profile = row[0]
 
         cur = db.execute("""
-            SELECT profile, internet, bandwidth, dns_filter, schedule, priority
+            SELECT profile, internet, bandwidth, dns_filter, schedule, priority,
+                   qos_enabled, qos_download, qos_upload, qos_priority
             FROM policies
             WHERE profile=?
         """, (selected_profile,))
@@ -39,7 +44,8 @@ def resolve(mac=None, profile=None):
 
         if not p and selected_profile != "default":
             cur = db.execute("""
-                SELECT profile, internet, bandwidth, dns_filter, schedule, priority
+                SELECT profile, internet, bandwidth, dns_filter, schedule, priority,
+                       qos_enabled, qos_download, qos_upload, qos_priority
                 FROM policies
                 WHERE profile='default'
             """)
@@ -55,4 +61,8 @@ def resolve(mac=None, profile=None):
         "dns_filter": p[3],
         "schedule": p[4],
         "priority": p[5],
+        "qos_enabled": bool(p[6]),
+        "qos_download": p[7],
+        "qos_upload": p[8],
+        "qos_priority": p[9],
     }
