@@ -6,6 +6,7 @@ tailscale_bp = Blueprint("tailscale_api", __name__)
 
 ENDPOINTS = [
     ("GET",  "/api/v1/tailscale"),
+    ("POST", "/api/v1/tailscale/install"),
     ("POST", "/api/v1/tailscale/up"),
     ("POST", "/api/v1/tailscale/down"),
     ("POST", "/api/v1/tailscale/logout"),
@@ -27,3 +28,8 @@ def api_tailscale_down():
 @tailscale_bp.post("/api/v1/tailscale/logout")
 def api_tailscale_logout():
     return ok(execute("tailscale", "logout"))
+
+
+@tailscale_bp.post("/api/v1/tailscale/install")
+def api_tailscale_install():
+    return ok(execute("tailscale", "install"))

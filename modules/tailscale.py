@@ -7,6 +7,9 @@ def execute(command, **kwargs):
     if command == "status":
         return tailscale_service.status()
 
+    if command == "install":
+        return tailscale_service.install()
+
     if command == "up":
         return tailscale_service.up(kwargs.get("args", []))
 

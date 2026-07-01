@@ -69,3 +69,19 @@ def logout():
 
     r = run(["tailscale", "logout"])
     return {"ok": r["ok"], "stdout": r["stdout"], "stderr": r["stderr"], "status": status()}
+
+def install():
+    if installed():
+        return {"ok": True, "already_installed": True, "status": status()}
+
+    r = run(["sh", "-c", "curl -fsSL https://tailscale.com/install.sh | sh"])
+
+    if r["ok"]:
+        run(["systemctl", "enable", "--now", "tailscaled"])
+
+    return {
+        "ok": r["ok"],
+        "stdout": r["stdout"],
+        "stderr": r["stderr"],
+        "status": status(),
+    }
