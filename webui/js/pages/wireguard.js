@@ -229,12 +229,15 @@ window.WireGuardActions = {
   },
 
   async exportPeer(id) {
-    const endpoint = prompt('Endpoint / public IP / DDNS for this peer config:', window.location.hostname) || '';
-    const r = await NinjakuAPI.get('/wireguard/peers/' + encodeURIComponent(id) + '/config?endpoint=' + encodeURIComponent(endpoint));
+    const r = await NinjakuAPI.get('/wireguard/peers/' + encodeURIComponent(id) + '/config');
 
     if (!r.ok) {
       UI.toast('error', 'Export failed', r.error || 'Unable to export peer config.');
       return;
+    }
+
+    if ((r.config || '').includes('YOUR_PUBLIC_IP_OR_DDNS')) {
+      UI.toast('warning', 'Endpoint missing', 'Set peer endpoint before using this config outside LAN.');
     }
 
     let root = document.getElementById('modal-root');

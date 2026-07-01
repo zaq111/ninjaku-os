@@ -524,7 +524,7 @@ def export_peer_config(peer_id, endpoint_host=""):
         return {"ok": False, "error": "peer allowed IP missing"}
 
     if not endpoint_host:
-        endpoint_host = endpoint or "YOUR_PUBLIC_IP_OR_DDNS"
+        endpoint_host = endpoint or ""
 
     endpoint_value = f"{endpoint_host}:{listen_port}" if ":" not in endpoint_host else endpoint_host
 
