@@ -125,3 +125,28 @@ def apply_policy():
 
 def resolve_policy(mac=None, profile=None):
     return resolve(mac=mac, profile=profile)
+
+
+def update_policy(profile, data):
+    ensure_table()
+
+    allowed = {
+        "internet", "bandwidth", "dns_filter", "schedule", "priority",
+        "qos_enabled", "qos_download", "qos_upload", "qos_priority"
+    }
+
+    changed = {}
+
+    for k, v in data.items():
+        if k not in allowed:
+            continue
+        r = set_policy(profile, k, v)
+        if r.get("ok"):
+            changed[k] = v
+
+    return {
+        "ok": True,
+        "profile": profile,
+        "changed": changed,
+        "policy": resolve_policy(profile=profile),
+    }

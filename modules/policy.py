@@ -14,6 +14,10 @@ def execute(command, **kwargs):
             kwargs.get("value", "")
         )
 
+    if command == "update":
+        profile = kwargs.pop("profile", "")
+        return policy_service.update_policy(profile, kwargs)
+
     if command == "resolve":
         return policy_service.resolve_policy(
             mac=kwargs.get("mac"),

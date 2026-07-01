@@ -7,6 +7,7 @@ policy_bp = Blueprint("policy_api", __name__)
 ENDPOINTS = [
     ("GET",  "/api/v1/policy"),
     ("POST", "/api/v1/policy"),
+    ("POST", "/api/v1/policy/<profile>"),
     ("GET",  "/api/v1/policy/resolve"),
     ("POST", "/api/v1/policy/apply"),
 ]
@@ -42,3 +43,9 @@ def api_policy_resolve():
 @policy_bp.post("/api/v1/policy/apply")
 def api_policy_apply():
     return ok(execute("policy", "apply"))
+
+
+@policy_bp.post("/api/v1/policy/<profile>")
+def api_policy_update_profile(profile):
+    data = request.get_json(silent=True) or {}
+    return ok(execute("policy", "update", profile=profile, **data))
