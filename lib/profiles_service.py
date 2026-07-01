@@ -1,4 +1,5 @@
 from lib.db import connect
+from lib.modules import execute as module_execute
 
 SYSTEM_PROFILES = {"default", "staff", "guest", "blocked"}
 
@@ -131,4 +132,10 @@ def update_profile(name, data):
             values
         )
 
-    return {"ok": cur.rowcount > 0, "profile": name}
+    apply_result = None
+    try:
+        apply_result = module_execute("qos", "apply")
+    except Exception as e:
+        apply_result = {"ok": False, "error": str(e)}
+
+    return {"ok": cur.rowcount > 0, "profile": name, "qos_applied": apply_result}
