@@ -27,7 +27,7 @@ Pages.profiles = {
         </div>
 
         <div class="pipe-actions">
-          <button class="soft-button" onclick="ProfileActions.edit('${escapeHtml(p.name)}')">Edit Profile</button>
+          <button class="soft-button" onclick="Ninjaku.navigate('policy')">Edit Policy</button>
         </div>
       </div>
     `).join('');
@@ -53,7 +53,7 @@ window.ProfileActions = {
     root.innerHTML = `
       <div class="modal-backdrop">
         <div class="modal">
-          <div class="modal-head"><h3>Edit Profile: ${escapeHtml(p.name)}</h3></div>
+          <div class="modal-head"><h3>Edit Policy: ${escapeHtml(p.name)}</h3></div>
           <div class="modal-body">
             <div class="form-stack">
               <label>Description</label>
