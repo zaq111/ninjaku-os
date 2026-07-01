@@ -53,8 +53,40 @@ window.TailscaleActions = {
 
   async up() {
     const r = await NinjakuAPI.post('/tailscale/up', { args: [] });
+
+    if (r.login_url) {
+      let root = document.getElementById('modal-root');
+      if (!root) {
+        root = document.createElement('div');
+        root.id = 'modal-root';
+        document.body.appendChild(root);
+      }
+
+      root.innerHTML = `
+        <div class="modal-backdrop">
+          <div class="modal">
+            <div class="modal-head"><h3>Tailscale Login Required</h3></div>
+            <div class="modal-body">
+              <p class="muted">Open this URL to authorize Ninjaku Router:</p>
+              <pre class="config-preview">${escapeHtml(r.login_url)}</pre>
+            </div>
+            <div class="modal-actions">
+              <button class="soft-button" onclick="TailscaleActions.close()">Close</button>
+              <button class="primary-button" onclick="window.open('${r.login_url}', '_blank')">Open Login URL</button>
+            </div>
+          </div>
+        </div>
+      `;
+      return;
+    }
+
     UI.toast(r.ok ? 'success' : 'error', r.ok ? 'Tailscale started' : 'Tailscale login needed', r.stderr || r.stdout || '');
     await Ninjaku.navigate('tailscale');
+  },
+
+  close() {
+    const root = document.getElementById('modal-root');
+    if (root) root.innerHTML = '';
   },
 
   async down() {

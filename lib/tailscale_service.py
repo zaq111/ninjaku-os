@@ -1,6 +1,11 @@
 import json
+import re
 import shutil
 from lib.system import run
+
+def extract_login_url(text):
+    m = re.search(r"https://login\.tailscale\.com/[^\s]+", text or "")
+    return m.group(0) if m else ""
 
 def installed():
     return shutil.which("tailscale") is not None
@@ -54,7 +59,14 @@ def up(extra_args=None):
         args += extra_args
 
     r = run(args)
-    return {"ok": r["ok"], "stdout": r["stdout"], "stderr": r["stderr"], "status": status()}
+    combined = (r["stdout"] or "") + "\n" + (r["stderr"] or "")
+    return {
+        "ok": r["ok"],
+        "stdout": r["stdout"],
+        "stderr": r["stderr"],
+        "login_url": extract_login_url(combined),
+        "status": status()
+    }
 
 def down():
     if not installed():
