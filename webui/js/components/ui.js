@@ -10,6 +10,7 @@ window.UI = {
       firewall: '🛡',
       dns_filter: '🛡',
       dhcp: '⇄',
+      wifi: '📶',
       network: '☍',
       qos: '⚡',
       vpn: '◇',

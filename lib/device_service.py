@@ -9,13 +9,33 @@ from lib.settings import get
 
 LEASE_FILE = Path("/var/lib/misc/dnsmasq.leases")
 
-def lan_network():
+def lan_networks():
+    nets = []
+
     lan_ip = get("router.lan_ip", "192.168.10.1/24")
-    return ipaddress.ip_interface(lan_ip).network
+    try:
+        nets.append(ipaddress.ip_interface(lan_ip).network)
+    except Exception:
+        pass
+
+    try:
+        from lib.wifi_service import get_config
+        wifi_ip = get_config().get("ip", "")
+        if wifi_ip:
+            nets.append(ipaddress.ip_interface(wifi_ip).network)
+    except Exception:
+        pass
+
+    return nets
+
+def lan_network():
+    nets = lan_networks()
+    return nets[0]
 
 def is_lan_ip(ip):
     try:
-        return ipaddress.ip_address(ip) in lan_network()
+        addr = ipaddress.ip_address(ip)
+        return any(addr in net for net in lan_networks())
     except Exception:
         return False
 

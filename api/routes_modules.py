@@ -12,6 +12,7 @@ MODULES = [
     {"id": "router", "title": "Router", "icon": "router", "order": 10, "page": "router"},
     {"id": "devices", "title": "Devices", "icon": "devices", "order": 20, "page": "devices"},
     {"id": "leases", "title": "Static Leases", "icon": "dhcp", "order": 25, "page": "leases"},
+    {"id": "wifi", "title": "Wireless", "icon": "wifi", "order": 26, "page": "wifi"},
     {"id": "policy", "title": "Policy", "icon": "policy", "order": 30, "page": "policy"},
     {"id": "qos", "title": "QoS", "icon": "qos", "order": 32, "page": "qos"},
     {"id": "adguard", "title": "AdGuard Home", "icon": "firewall", "order": 35, "page": "adguard"},
