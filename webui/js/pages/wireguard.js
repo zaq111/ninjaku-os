@@ -30,7 +30,7 @@ Pages.wireguard = {
         <td>${escapeHtml(p.endpoint || '-')}</td>
         <td>
           <button class="soft-button" onclick="WireGuardActions.generatePeerKeys('${escapeHtml(p.id)}')">Generate</button>
-          <button class="soft-button" disabled>Export</button>
+          <button class="soft-button" ${p.has_private_key ? '' : 'disabled'} onclick="WireGuardActions.exportPeer('${escapeHtml(p.id)}')">Export</button>
           <button class="danger-button" onclick="WireGuardActions.deletePeer('${escapeHtml(p.id)}')">Delete</button>
         </td>
       </tr>
@@ -226,6 +226,46 @@ window.WireGuardActions = {
     this.close();
     UI.toast('success', 'Peer saved', 'WireGuard peer was saved.');
     await Ninjaku.navigate('wireguard');
+  },
+
+  async exportPeer(id) {
+    const endpoint = prompt('Endpoint / public IP / DDNS for this peer config:', window.location.hostname) || '';
+    const r = await NinjakuAPI.get('/wireguard/peers/' + encodeURIComponent(id) + '/config?endpoint=' + encodeURIComponent(endpoint));
+
+    if (!r.ok) {
+      UI.toast('error', 'Export failed', r.error || 'Unable to export peer config.');
+      return;
+    }
+
+    let root = document.getElementById('modal-root');
+    if (!root) {
+      root = document.createElement('div');
+      root.id = 'modal-root';
+      document.body.appendChild(root);
+    }
+
+    root.innerHTML = `
+      <div class="modal-backdrop">
+        <div class="modal wide-modal">
+          <div class="modal-head"><h3>Export Peer Config: ${escapeHtml(r.name || id)}</h3></div>
+          <div class="modal-body">
+            <p class="muted">Save this config as <strong>${escapeHtml(r.filename || (id + '.conf'))}</strong>.</p>
+            <pre id="wg-export-config" class="config-preview">${escapeHtml(r.config || '')}</pre>
+          </div>
+          <div class="modal-actions">
+            <button class="soft-button" onclick="WireGuardActions.close()">Close</button>
+            <button class="primary-button" onclick="WireGuardActions.copyConfig()">Copy Config</button>
+          </div>
+        </div>
+      </div>
+    `;
+  },
+
+  async copyConfig() {
+    const text = document.getElementById('wg-export-config')?.innerText || '';
+    if (!text) return;
+    await navigator.clipboard.writeText(text);
+    UI.toast('success', 'Copied', 'WireGuard config copied to clipboard.');
   },
 
   async deletePeer(id) {

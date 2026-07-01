@@ -759,3 +759,14 @@ textarea:disabled {
   max-height: 260px;
   overflow: auto;
 }
+
+.wide-modal {
+  max-width: 780px;
+}
+
+.config-preview {
+  max-height: 420px;
+  overflow: auto;
+  white-space: pre-wrap;
+  font-size: 12px;
+}
