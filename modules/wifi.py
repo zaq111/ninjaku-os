@@ -7,6 +7,9 @@ def execute(command, **kwargs):
     if command == "status":
         return wifi_service.status()
 
+    if command == "stations":
+        return wifi_service.stations()
+
     if command == "config":
         return wifi_service.update_config(kwargs)
 
@@ -15,5 +18,14 @@ def execute(command, **kwargs):
 
     if command == "write-config":
         return wifi_service.write_hostapd_config()
+
+    if command == "start":
+        return wifi_service.start()
+
+    if command == "stop":
+        return wifi_service.stop()
+
+    if command == "restart":
+        return wifi_service.restart()
 
     raise Exception(f"Unknown wifi command: {command}")

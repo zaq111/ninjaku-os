@@ -216,3 +216,127 @@ def status():
         "ap_capable": ap_capable(),
         "runtime": runtime(),
     }
+
+def apply_ip():
+    cfg = get_config()
+    iface = cfg["interface"]
+    ip = cfg["ip"]
+
+    run(["ip", "link", "set", iface, "down"])
+    run(["ip", "addr", "flush", "dev", iface])
+    run(["ip", "addr", "add", ip, "dev", iface])
+    run(["ip", "link", "set", iface, "up"])
+
+    return {"ok": True, "interface": iface, "ip": ip}
+
+def start():
+    cfg_written = write_hostapd_config()
+    if not cfg_written.get("ok"):
+        return cfg_written
+
+    ip_result = apply_ip()
+
+    run(["systemctl", "unmask", "hostapd"])
+    run(["systemctl", "enable", "hostapd"])
+
+    r = run(["systemctl", "restart", "hostapd"], timeout=30)
+
+    if r["ok"]:
+        update_config({"enabled": True})
+
+    return {
+        "ok": r["ok"],
+        "stdout": r["stdout"],
+        "stderr": r["stderr"],
+        "config": cfg_written,
+        "ip": ip_result,
+        "status": status(),
+    }
+
+def stop():
+    r = run(["systemctl", "stop", "hostapd"], timeout=30)
+
+    if r["ok"]:
+        update_config({"enabled": False})
+
+    return {
+        "ok": r["ok"],
+        "stdout": r["stdout"],
+        "stderr": r["stderr"],
+        "status": status(),
+    }
+
+def restart():
+    stop()
+    return start()
+
+import re
+
+def stations():
+    cfg = get_config()
+    iface = cfg["interface"]
+
+    r = run(["iw","dev",iface,"station","dump"])
+
+    if not r["ok"]:
+        return {
+            "ok":False,
+            "count":0,
+            "stations":[]
+        }
+
+    stations=[]
+    current=None
+
+    for line in r["stdout"].splitlines():
+
+        if line.startswith("Station "):
+            if current:
+                stations.append(current)
+
+            mac=line.split()[1]
+
+            current={
+                "mac":mac
+            }
+
+            continue
+
+        if current is None:
+            continue
+
+        s=line.strip()
+
+        if s.startswith("signal:"):
+            m=re.search(r'(-?\d+)',s)
+            if m:
+                current["signal"]=int(m.group(1))
+
+        elif s.startswith("inactive time:"):
+            m=re.search(r'(\d+)',s)
+            if m:
+                current["inactive"]=int(m.group(1))
+
+        elif s.startswith("connected time:"):
+            m=re.search(r'(\d+)',s)
+            if m:
+                current["connected"]=int(m.group(1))
+
+        elif s.startswith("authorized:"):
+            current["authorized"]=s.endswith("yes")
+
+        elif s.startswith("rx bitrate:"):
+            current["rx_bitrate"]=s.split(":",1)[1].strip()
+
+        elif s.startswith("tx bitrate:"):
+            current["tx_bitrate"]=s.split(":",1)[1].strip()
+
+    if current:
+        stations.append(current)
+
+    return {
+        "ok":True,
+        "count":len(stations),
+        "stations":stations
+    }
+
