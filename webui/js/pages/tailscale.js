@@ -16,12 +16,38 @@ Pages.tailscale = {
         ${UI.statCard({ icon: '▣', color: data.ip ? 'blue' : 'orange', label: 'Tailscale IP', value: data.ip || '-', sub: data.hostname || '-' })}
       </section>
 
-      ${UI.panel('Tailscale Status', `
-        <table class="table">
+      ${UI.panel('Remote Management', `
+        <div class="remote-card-grid">
+          <div class="remote-card">
+            <span>Status</span>
+            <strong>${data.connected ? 'Connected' : (data.backend_state || 'Disconnected')}</strong>
+          </div>
+          <div class="remote-card">
+            <span>Tailscale IP</span>
+            <strong>${escapeHtml(data.ip || '-')}</strong>
+          </div>
+          <div class="remote-card">
+            <span>MagicDNS</span>
+            <strong>${escapeHtml(data.dns_name || '-')}</strong>
+          </div>
+          <div class="remote-card">
+            <span>User</span>
+            <strong>${escapeHtml(data.user || '-')}</strong>
+          </div>
+        </div>
+
+        <div class="remote-actions">
+          <button class="soft-button" ${data.ip ? '' : 'disabled'} onclick="TailscaleActions.copy('${escapeHtml(data.ip || '')}', 'Tailscale IP')">Copy IP</button>
+          <button class="soft-button" ${data.dns_name ? '' : 'disabled'} onclick="TailscaleActions.copy('${escapeHtml(data.dns_name || '')}', 'MagicDNS')">Copy DNS</button>
+          <button class="primary-button" ${data.ip ? '' : 'disabled'} onclick="window.open('http://${escapeHtml(data.ip || '')}', '_blank')">Open Web UI</button>
+        </div>
+
+        <table class="table" style="margin-top:18px">
           <tbody>
             <tr><th>Installed</th><td>${data.installed ? 'Yes' : 'No'}</td></tr>
             <tr><th>Service</th><td>${escapeHtml(svc.state || 'unknown')}</td></tr>
-            <tr><th>Connected</th><td>${data.connected ? 'Yes' : 'No'}</td></tr>
+            <tr><th>Backend State</th><td>${escapeHtml(data.backend_state || '-')}</td></tr>
+            <tr><th>Hostname</th><td>${escapeHtml(data.hostname || '-')}</td></tr>
             <tr><th>IP</th><td>${escapeHtml(data.ip || '-')}</td></tr>
             <tr><th>DNS Name</th><td>${escapeHtml(data.dns_name || '-')}</td></tr>
             <tr><th>User</th><td>${escapeHtml(data.user || '-')}</td></tr>
@@ -44,6 +70,12 @@ Pages.tailscale = {
 };
 
 window.TailscaleActions = {
+  async copy(value, label = 'Value') {
+    if (!value) return;
+    await navigator.clipboard.writeText(value);
+    UI.toast('success', 'Copied', label + ' copied to clipboard.');
+  },
+
   async install() {
     UI.toast('info', 'Installing Tailscale', 'This may take a while.');
     const r = await NinjakuAPI.post('/tailscale/install');
