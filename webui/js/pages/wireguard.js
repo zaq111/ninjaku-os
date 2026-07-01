@@ -59,6 +59,9 @@ Pages.wireguard = {
       `, `
         <button class="soft-button" onclick="WireGuardActions.generateServerKeys()">${serverKeyStatus ? 'Regenerate Keys' : 'Generate Keys'}</button>
         <button class="primary-button" onclick="WireGuardActions.saveServer()">Save Server</button>
+        ${data.running
+          ? '<button class="danger-button" onclick="WireGuardActions.stop()">Stop</button><button class="soft-button" onclick="WireGuardActions.restart()">Restart</button>'
+          : '<button class="primary-button" onclick="WireGuardActions.apply()">Start / Apply</button>'}
       `)}
 
       ${UI.panel('Server Keys', `
@@ -72,6 +75,13 @@ Pages.wireguard = {
             <strong>${escapeHtml(shortKey(s.public_key || ''))}</strong>
           </div>
           <button class="soft-button" ${s.public_key ? '' : 'disabled'} onclick="WireGuardActions.copy('${escapeHtml(s.public_key || '')}')">Copy</button>
+        </div>
+      `)}
+
+      ${UI.panel('Runtime Status', `
+        <div class="wg-runtime">
+          <div>${UI.badge(data.running ? 'Running' : 'Not Running', data.running ? 'green' : 'orange')}</div>
+          <pre>${escapeHtml((data.runtime && data.runtime.wg_show) ? data.runtime.wg_show : 'WireGuard interface is not running.')}</pre>
         </div>
       `)}
 
@@ -97,6 +107,32 @@ window.WireGuardActions = {
     });
 
     UI.toast('success', 'WireGuard saved', 'Server settings were saved.');
+    await Ninjaku.navigate('wireguard');
+  },
+
+  async apply() {
+    const r = await NinjakuAPI.post('/wireguard/apply');
+    UI.toast(r.ok ? 'success' : 'error', r.ok ? 'WireGuard started' : 'WireGuard failed', r.stderr || 'Apply completed.');
+    await Ninjaku.navigate('wireguard');
+  },
+
+  async stop() {
+    const ok = await UI.confirm({
+      title: 'Stop WireGuard?',
+      message: 'Remote VPN access through this tunnel will be stopped.',
+      confirmText: 'Stop',
+      danger: true
+    });
+    if (!ok) return;
+
+    const r = await NinjakuAPI.post('/wireguard/stop');
+    UI.toast(r.ok ? 'success' : 'error', r.ok ? 'WireGuard stopped' : 'Stop failed', r.stderr || 'Stop completed.');
+    await Ninjaku.navigate('wireguard');
+  },
+
+  async restart() {
+    const r = await NinjakuAPI.post('/wireguard/restart');
+    UI.toast(r.ok ? 'success' : 'error', r.ok ? 'WireGuard restarted' : 'Restart failed', r.stderr || 'Restart completed.');
     await Ninjaku.navigate('wireguard');
   },
 

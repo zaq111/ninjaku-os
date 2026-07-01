@@ -749,3 +749,13 @@ textarea:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.wg-runtime {
+  display: grid;
+  gap: 12px;
+}
+
+.wg-runtime pre {
+  max-height: 260px;
+  overflow: auto;
+}
