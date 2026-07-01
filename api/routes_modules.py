@@ -15,7 +15,6 @@ MODULES = [
     {"id": "policy", "title": "Policy", "icon": "policy", "order": 30, "page": "policy"},
     {"id": "qos", "title": "QoS", "icon": "qos", "order": 32, "page": "qos"},
     {"id": "adguard", "title": "AdGuard Home", "icon": "firewall", "order": 35, "page": "adguard"},
-    {"id": "profiles", "title": "Profiles", "icon": "profiles", "order": 40, "page": "profiles"},
     {"id": "settings", "title": "Settings", "icon": "settings", "order": 90, "page": "settings"},
 ]
 

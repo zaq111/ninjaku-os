@@ -668,3 +668,35 @@ textarea:disabled {
   cursor: not-allowed;
   background: var(--surface-soft);
 }
+
+.policy-main-row {
+  cursor: pointer;
+}
+
+.policy-main-row:hover {
+  background: var(--surface-soft);
+}
+
+.row-toggle {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--surface);
+  font-weight: 900;
+  margin-right: 8px;
+}
+
+.policy-devices.hidden {
+  display: none;
+}
+
+.policy-device-row td {
+  background: var(--surface-soft);
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.policy-device-row strong {
+  color: var(--text);
+}

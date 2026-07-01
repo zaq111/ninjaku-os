@@ -2,27 +2,50 @@ window.Pages = window.Pages || {};
 
 Pages.policy = {
   title: 'Policy',
-  subtitle: 'Profile-based internet, DNS and QoS policy.',
+  subtitle: 'Profile-based internet, DNS, QoS and device policy.',
 
   async render() {
-    const data = await NinjakuAPI.get('/policy');
-    PolicyActions.policies = data.policies || [];
+    const [policyData, devicesData] = await Promise.all([
+      NinjakuAPI.get('/policy'),
+      NinjakuAPI.get('/devices')
+    ]);
 
-    const rows = PolicyActions.policies.map(p => `
-      <tr>
-        <td><strong>${escapeHtml(p.profile)}</strong></td>
-        <td>${UI.badge(p.internet, p.internet === 'allow' ? 'green' : 'red')}</td>
-        <td>${escapeHtml(p.dns_filter)}</td>
-        <td>${escapeHtml(p.schedule)}</td>
-        <td>${UI.badge(p.qos_enabled ? 'enabled' : 'off', p.qos_enabled ? 'green' : 'orange')}</td>
-        <td>${p.qos_enabled ? `↓ ${escapeHtml(p.qos_download || 'unlimited')} / ↑ ${escapeHtml(p.qos_upload || 'unlimited')}` : '<span class="muted">disabled</span>'}</td>
-        <td>${p.qos_enabled ? escapeHtml(p.qos_priority || 'normal') : '<span class="muted">-</span>'}</td>
-        <td><button class="soft-button" onclick="PolicyActions.edit('${escapeHtml(p.profile)}')">Edit</button></td>
-      </tr>
-    `).join('');
+    PolicyActions.policies = policyData.policies || [];
+    PolicyActions.devices = devicesData.devices || [];
+
+    const rows = PolicyActions.policies.map(p => {
+      const devices = PolicyActions.devices.filter(d => (d.profile || 'default') === p.profile);
+      const deviceRows = devices.map(d => `
+        <tr class="policy-device-row">
+          <td></td>
+          <td colspan="2"><strong>${escapeHtml(d.alias || d.hostname || 'Unknown')}</strong></td>
+          <td>${escapeHtml(d.ip || '-')}</td>
+          <td>${escapeHtml(d.mac || '-')}</td>
+          <td>${UI.badge(d.status || 'unknown', statusColor(d.status))}</td>
+          <td>${escapeHtml(d.policy_bandwidth || '-')}</td>
+          <td></td>
+        </tr>
+      `).join('');
+
+      return `
+        <tr class="policy-main-row" onclick="PolicyActions.toggle('${escapeHtml(p.profile)}')">
+          <td><button class="row-toggle" id="toggle-${escapeHtml(p.profile)}">+</button> <strong>${escapeHtml(p.profile)}</strong> <span class="muted">(${devices.length})</span></td>
+          <td>${UI.badge(p.internet, p.internet === 'allow' ? 'green' : 'red')}</td>
+          <td>${escapeHtml(p.dns_filter)}</td>
+          <td>${escapeHtml(p.schedule)}</td>
+          <td>${UI.badge(p.qos_enabled ? 'enabled' : 'off', p.qos_enabled ? 'green' : 'orange')}</td>
+          <td>${p.qos_enabled ? `↓ ${escapeHtml(p.qos_download || 'unlimited')} / ↑ ${escapeHtml(p.qos_upload || 'unlimited')}` : '<span class="muted">disabled</span>'}</td>
+          <td>${p.qos_enabled ? escapeHtml(p.qos_priority || 'normal') : '<span class="muted">-</span>'}</td>
+          <td><button class="soft-button" onclick="event.stopPropagation(); PolicyActions.edit('${escapeHtml(p.profile)}')">Edit</button></td>
+        </tr>
+        <tbody id="policy-devices-${escapeHtml(p.profile)}" class="policy-devices hidden">
+          ${deviceRows || `<tr class="policy-device-row"><td></td><td colspan="7" class="muted">No devices in this profile.</td></tr>`}
+        </tbody>
+      `;
+    }).join('');
 
     return UI.panel('Policies', `
-      <table class="table">
+      <table class="table policy-table">
         <thead>
           <tr>
             <th>Profile</th><th>Internet</th><th>DNS</th><th>Schedule</th>
@@ -37,6 +60,16 @@ Pages.policy = {
 
 window.PolicyActions = {
   policies: [],
+  devices: [],
+
+  toggle(profile) {
+    const body = document.getElementById('policy-devices-' + profile);
+    const btn = document.getElementById('toggle-' + profile);
+    if (!body) return;
+
+    body.classList.toggle('hidden');
+    if (btn) btn.textContent = body.classList.contains('hidden') ? '+' : '−';
+  },
 
   edit(profile) {
     const p = this.policies.find(x => x.profile === profile);
@@ -100,17 +133,17 @@ window.PolicyActions = {
     `;
   },
 
-  close() {
-    const root = document.getElementById('modal-root');
-    if (root) root.innerHTML = '';
-  },
-
   toggleQosFields() {
     const enabled = document.getElementById('policy-qos-enabled').checked;
     for (const id of ['policy-qos-download', 'policy-qos-upload', 'policy-qos-priority']) {
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
     }
+  },
+
+  close() {
+    const root = document.getElementById('modal-root');
+    if (root) root.innerHTML = '';
   },
 
   async save(profile) {
