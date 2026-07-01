@@ -73,18 +73,18 @@ window.PolicyActions = {
 
               <label>QoS</label>
               <label class="inline-check">
-                <input type="checkbox" id="policy-qos-enabled" ${p.qos_enabled ? 'checked' : ''}>
+                <input type="checkbox" id="policy-qos-enabled" ${p.qos_enabled ? 'checked' : ''} onchange="PolicyActions.toggleQosFields()">
                 Enable QoS priority for this policy
               </label>
 
               <label>Download Shape</label>
-              <input id="policy-qos-download" value="${escapeHtml(p.qos_download || '')}" placeholder="20mbit">
+              <input id="policy-qos-download" value="${escapeHtml(p.qos_download || '')}" placeholder="20mbit" ${p.qos_enabled ? '' : 'disabled'}>
 
               <label>Upload Shape</label>
-              <input id="policy-qos-upload" value="${escapeHtml(p.qos_upload || '')}" placeholder="5mbit">
+              <input id="policy-qos-upload" value="${escapeHtml(p.qos_upload || '')}" placeholder="5mbit" ${p.qos_enabled ? '' : 'disabled'}>
 
               <label>QoS Priority</label>
-              <select id="policy-qos-priority">
+              <select id="policy-qos-priority" ${p.qos_enabled ? '' : 'disabled'}>
                 <option value="low" ${p.qos_priority === 'low' ? 'selected' : ''}>low</option>
                 <option value="normal" ${p.qos_priority === 'normal' ? 'selected' : ''}>normal</option>
                 <option value="high" ${p.qos_priority === 'high' ? 'selected' : ''}>high</option>
@@ -103,6 +103,14 @@ window.PolicyActions = {
   close() {
     const root = document.getElementById('modal-root');
     if (root) root.innerHTML = '';
+  },
+
+  toggleQosFields() {
+    const enabled = document.getElementById('policy-qos-enabled').checked;
+    for (const id of ['policy-qos-download', 'policy-qos-upload', 'policy-qos-priority']) {
+      const el = document.getElementById(id);
+      if (el) el.disabled = !enabled;
+    }
   },
 
   async save(profile) {

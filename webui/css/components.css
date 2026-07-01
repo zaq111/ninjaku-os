@@ -660,3 +660,11 @@ textarea:focus {
   width: auto;
   height: auto;
 }
+
+input:disabled,
+select:disabled,
+textarea:disabled {
+  opacity: .55;
+  cursor: not-allowed;
+  background: var(--surface-soft);
+}
