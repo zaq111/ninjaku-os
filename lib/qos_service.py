@@ -243,4 +243,5 @@ def status():
         "wan_exists": iface_exists(wan),
         "wan_qdisc": run(["tc", "-s", "qdisc", "show", "dev", wan])["stdout"],
         "ifb_qdisc": run(["tc", "-s", "qdisc", "show", "dev", ifb])["stdout"] if iface_exists(ifb) else "",
+        "profile_rules": profile_dscp_rules(),
     }

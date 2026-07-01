@@ -7,6 +7,15 @@ Pages.qos = {
   async render() {
     const data = await NinjakuAPI.get('/qos');
     const c = data.config || {};
+    const profileRules = data.profile_rules || [];
+
+    const profileRuleRows = profileRules.map(r => `
+      <tr>
+        <td><strong>${escapeHtml(r[2])}</strong></td>
+        <td>${escapeHtml(r[0])}</td>
+        <td>${UI.badge(r[1], r[1] === 'cs5' ? 'green' : 'orange')}</td>
+      </tr>
+    `).join('');
 
     return `
       <section class="grid grid-4" style="margin-bottom:18px">
@@ -41,6 +50,13 @@ Pages.qos = {
       `, `
         <button class="primary-button" onclick="QosActions.saveApply()">Save & Apply</button>
         <button class="danger-button" onclick="QosActions.disable()">Disable QoS</button>
+      `)}
+
+      ${UI.panel('Profile QoS Priority Rules', `
+        <table class="table">
+          <thead><tr><th>Profile</th><th>Client IP</th><th>DSCP</th></tr></thead>
+          <tbody>${profileRuleRows || '<tr><td colspan="3">No profile QoS priority rules active.</td></tr>'}</tbody>
+        </table>
       `)}
 
       ${UI.panel('WAN qdisc', `<pre>${escapeHtml(data.wan_qdisc || 'No qdisc data')}</pre>`)}
