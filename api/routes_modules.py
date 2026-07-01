@@ -15,6 +15,7 @@ MODULES = [
     {"id": "policy", "title": "Policy", "icon": "policy", "order": 30, "page": "policy"},
     {"id": "qos", "title": "QoS", "icon": "qos", "order": 32, "page": "qos"},
     {"id": "adguard", "title": "AdGuard Home", "icon": "firewall", "order": 35, "page": "adguard"},
+    {"id": "tailscale", "title": "Tailscale", "icon": "vpn", "order": 61, "page": "tailscale"},
     {"id": "wireguard", "title": "WireGuard", "icon": "vpn", "order": 60, "page": "wireguard"},
     {"id": "settings", "title": "Settings", "icon": "settings", "order": 90, "page": "settings"},
 ]
