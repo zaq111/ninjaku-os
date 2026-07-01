@@ -16,4 +16,8 @@ def execute(command, **kwargs):
     if command == "delete":
         return profiles_service.delete_profile(kwargs.get("name", ""))
 
+    if command == "update":
+        name = kwargs.pop("name", "")
+        return profiles_service.update_profile(name, kwargs)
+
     raise Exception(f"Unknown profiles command: {command}")

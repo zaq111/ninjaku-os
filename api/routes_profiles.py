@@ -8,6 +8,7 @@ ENDPOINTS = [
     ("GET",    "/api/v1/profiles"),
     ("POST",   "/api/v1/profiles"),
     ("DELETE", "/api/v1/profiles/<name>"),
+    ("POST",   "/api/v1/profiles/<name>"),
 ]
 
 @profiles_bp.get("/api/v1/profiles")
@@ -28,3 +29,9 @@ def api_profiles_add():
 @profiles_bp.delete("/api/v1/profiles/<name>")
 def api_profiles_delete(name):
     return ok(execute("profiles", "delete", name=name))
+
+
+@profiles_bp.post("/api/v1/profiles/<name>")
+def api_profiles_update(name):
+    data = request.get_json(silent=True) or {}
+    return ok(execute("profiles", "update", name=name, **data))

@@ -24,6 +24,17 @@ def ensure_table():
         if "is_system" not in cols:
             db.execute("ALTER TABLE profiles ADD COLUMN is_system INTEGER DEFAULT 0")
 
+        extra_cols = {
+            "qos_enabled": "INTEGER DEFAULT 0",
+            "qos_download": "TEXT DEFAULT ''",
+            "qos_upload": "TEXT DEFAULT ''",
+            "qos_priority": "TEXT DEFAULT 'normal'"
+        }
+
+        for col, spec in extra_cols.items():
+            if col not in cols:
+                db.execute(f"ALTER TABLE profiles ADD COLUMN {col} {spec}")
+
         for name, desc, is_system in DEFAULT_PROFILES:
             db.execute(
                 "INSERT OR IGNORE INTO profiles(name, description, is_system) VALUES(?,?,?)",
@@ -39,7 +50,7 @@ def list_profiles():
 
     with connect() as db:
         cur = db.execute("""
-            SELECT name, description, is_system
+            SELECT name, description, is_system, qos_enabled, qos_download, qos_upload, qos_priority
             FROM profiles
             ORDER BY is_system DESC, name
         """)
@@ -49,6 +60,10 @@ def list_profiles():
         "name": r[0],
         "description": r[1],
         "is_system": bool(r[2]),
+        "qos_enabled": bool(r[3]),
+        "qos_download": r[4],
+        "qos_upload": r[5],
+        "qos_priority": r[6],
     } for r in rows]
 
 def add_profile(name, description=""):
@@ -78,3 +93,42 @@ def delete_profile(name):
         deleted = cur.rowcount
 
     return {"ok": deleted > 0, "name": name, "deleted": deleted}
+
+
+def update_profile(name, data):
+    ensure_table()
+    name = name.strip().lower()
+
+    allowed = {
+        "description",
+        "qos_enabled",
+        "qos_download",
+        "qos_upload",
+        "qos_priority",
+    }
+
+    fields = []
+    values = []
+
+    for k, v in data.items():
+        if k not in allowed:
+            continue
+
+        if k == "qos_enabled":
+            v = 1 if str(v).lower() in ("1", "true", "yes", "on") else 0
+
+        fields.append(f"{k}=?")
+        values.append(v)
+
+    if not fields:
+        return {"ok": False, "error": "no valid fields"}
+
+    values.append(name)
+
+    with connect() as db:
+        cur = db.execute(
+            "UPDATE profiles SET " + ", ".join(fields) + " WHERE name=?",
+            values
+        )
+
+    return {"ok": cur.rowcount > 0, "profile": name}

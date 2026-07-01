@@ -81,6 +81,41 @@ def cake_args(rate, direction):
     return args
 
 
+
+def profile_dscp_rules():
+    from lib.device_service import list_devices
+    from lib.profiles_service import list_profiles
+
+    profiles = {p["name"]: p for p in list_profiles()}
+    devices = list_devices()
+
+    rules = []
+
+    for d in devices:
+        ip = d.get("ip")
+        profile_name = d.get("profile") or "default"
+        profile = profiles.get(profile_name, {})
+
+        if not ip:
+            continue
+
+        if not profile.get("qos_enabled"):
+            continue
+
+        priority = profile.get("qos_priority", "normal")
+
+        if priority == "high":
+            dscp = "cs5"
+        elif priority == "low":
+            dscp = "cs1"
+        else:
+            continue
+
+        rules.append((ip, dscp, profile_name))
+
+    return rules
+
+
 def apply_dscp_marks():
     # Minimal DSCP marking for CAKE diffserv4.
     # Keep it small and safe. No CIDR/provider classification.
@@ -109,13 +144,18 @@ def apply_dscp_marks():
         ["nft", "add", "rule", "inet", "ninjaku_qos", "mark_postrouting", "udp", "dport", "{", "6881-6889", ",", "51413", "}", "ip", "dscp", "set", "cs1"],
     ]
 
+    # Profile-based DSCP marking.
+    for ip, dscp, profile in profile_dscp_rules():
+        cmds.append(["nft", "add", "rule", "inet", "ninjaku_qos", "mark_prerouting", "ip", "saddr", ip, "ip", "dscp", "set", dscp])
+        cmds.append(["nft", "add", "rule", "inet", "ninjaku_qos", "mark_postrouting", "ip", "daddr", ip, "ip", "dscp", "set", dscp])
+
     errors = []
     for cmd in cmds:
         r = run(cmd)
         if not r["ok"]:
             errors.append({"cmd": " ".join(cmd), "stderr": r["stderr"]})
 
-    return {"ok": len(errors) == 0, "errors": errors}
+    return {"ok": len(errors) == 0, "errors": errors, "profile_rules": profile_dscp_rules()}
 
 def clear_dscp_marks():
     run(["nft", "delete", "table", "inet", "ninjaku_qos"])
