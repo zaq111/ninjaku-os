@@ -175,11 +175,18 @@ def update_device(mac, field, value):
         db.execute(f"UPDATE devices SET {field}=? WHERE mac=?", (value, mac))
 
     apply_result = None
+    qos_result = None
+
     if field == "profile":
         try:
             apply_result = module_execute("policy", "apply")
         except Exception as e:
             apply_result = {"ok": False, "error": str(e)}
+
+        try:
+            qos_result = module_execute("qos", "apply")
+        except Exception as e:
+            qos_result = {"ok": False, "error": str(e)}
 
     return {
         "ok": True,
@@ -187,6 +194,7 @@ def update_device(mac, field, value):
         "field": field,
         "value": value,
         "policy_applied": apply_result,
+        "qos_applied": qos_result,
     }
 
 def cleanup_wan():
