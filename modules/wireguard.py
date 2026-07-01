@@ -5,7 +5,7 @@ from lib import wireguard_service
 
 def execute(command, **kwargs):
     if command == "status":
-        return wireguard_service.status()
+        return wireguard_service.runtime_status()
 
     if command == "server":
         return wireguard_service.update_server(kwargs)
@@ -27,5 +27,17 @@ def execute(command, **kwargs):
 
     if command == "generate-config":
         return wireguard_service.generate_config_text()
+
+    if command == "write-config":
+        return wireguard_service.write_config()
+
+    if command == "apply":
+        return wireguard_service.apply()
+
+    if command == "stop":
+        return wireguard_service.stop()
+
+    if command == "restart":
+        return wireguard_service.restart()
 
     raise Exception(f"Unknown wireguard command: {command}")

@@ -391,3 +391,98 @@ def generate_config_text():
         "path": f"/etc/wireguard/{interface}.conf",
         "config": "\n".join(lines).strip() + "\n",
     }
+
+def write_config():
+    import os
+
+    generated = generate_config_text()
+    if not generated.get("ok"):
+        return generated
+
+    path = generated["path"]
+    os.makedirs("/etc/wireguard", exist_ok=True)
+
+    tmp = path + ".tmp"
+    with open(tmp, "w") as f:
+        f.write(generated["config"])
+
+    os.chmod(tmp, 0o600)
+    os.replace(tmp, path)
+
+    return {
+        "ok": True,
+        "path": path,
+        "interface": generated["interface"],
+        "bytes": len(generated["config"]),
+    }
+
+def iface_exists(name):
+    return run(["ip", "link", "show", name])["ok"]
+
+def runtime_status():
+    ensure_tables()
+    s = status()
+    iface = s["server"]["interface"]
+
+    wg = run(["wg", "show", iface])
+    iplink = run(["ip", "link", "show", iface])
+
+    s["running"] = wg["ok"] and iplink["ok"]
+    s["runtime"] = {
+        "interface": iface,
+        "wg_show": wg["stdout"] if wg["ok"] else "",
+        "ip_link": iplink["stdout"] if iplink["ok"] else "",
+        "error": wg["stderr"] or iplink["stderr"],
+    }
+    s["phase"] = "runtime" if s["running"] else "config-ready"
+    return s
+
+def apply():
+    written = write_config()
+    if not written.get("ok"):
+        return written
+
+    iface = written["interface"]
+
+    # If already running, bring it down first for clean config reload.
+    if iface_exists(iface):
+        run(["wg-quick", "down", iface])
+
+    up = run(["wg-quick", "up", iface])
+
+    if up["ok"]:
+        with connect() as db:
+            db.execute("UPDATE wireguard SET enabled=1, updated_at=CURRENT_TIMESTAMP WHERE id='server'")
+
+    return {
+        "ok": up["ok"],
+        "interface": iface,
+        "write_config": written,
+        "stdout": up["stdout"],
+        "stderr": up["stderr"],
+        "status": runtime_status(),
+    }
+
+def stop():
+    s = status()
+    iface = s["server"]["interface"]
+
+    down = run(["wg-quick", "down", iface])
+
+    ok_state = down["ok"] or "is not a WireGuard interface" in down["stderr"] or "No such device" in down["stderr"]
+
+    if ok_state:
+        with connect() as db:
+            db.execute("UPDATE wireguard SET enabled=0, updated_at=CURRENT_TIMESTAMP WHERE id='server'")
+
+    return {
+        "ok": ok_state,
+        "interface": iface,
+        "stdout": down["stdout"],
+        "stderr": down["stderr"],
+        "status": runtime_status(),
+    }
+
+def restart():
+    stop()
+    return apply()
