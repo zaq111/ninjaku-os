@@ -38,7 +38,7 @@ Pages.tailscale = {
 
         <div class="remote-actions">
           <button class="soft-button" ${data.ip ? '' : 'disabled'} onclick="TailscaleActions.copy('${escapeHtml(data.ip || '')}', 'Tailscale IP')">Copy IP</button>
-          <button class="soft-button" ${data.dns_name ? '' : 'disabled'} onclick="TailscaleActions.copy('${escapeHtml(data.dns_name || '')}', 'MagicDNS')">Copy DNS</button>
+          <button class="soft-button" ${data.dns_name ? '' : 'disabled'} onclick="TailscaleActions.copyDns()">Copy DNS</button>
           <button class="primary-button" ${data.ip ? '' : 'disabled'} onclick="window.open('http://${escapeHtml(data.ip || '')}', '_blank')">Open Web UI</button>
         </div>
 
@@ -74,6 +74,14 @@ window.TailscaleActions = {
     if (!value) return;
     await navigator.clipboard.writeText(value);
     UI.toast('success', 'Copied', label + ' copied to clipboard.');
+  },
+
+  async copyDns() {
+    const data = await NinjakuAPI.get('/tailscale');
+    const dns = (data.dns_name || '').replace(/\.$/, '');
+    if (!dns) return;
+    await navigator.clipboard.writeText(dns);
+    UI.toast('success', 'Copied', 'MagicDNS copied to clipboard.');
   },
 
   async install() {

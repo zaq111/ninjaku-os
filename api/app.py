@@ -23,6 +23,7 @@ from api.routes_qos_pipes import qos_pipes_bp, ENDPOINTS as QOS_PIPES_ENDPOINTS
 from api.routes_wireguard import wireguard_bp, ENDPOINTS as WIREGUARD_ENDPOINTS
 from api.routes_packages import packages_bp, ENDPOINTS as PACKAGES_ENDPOINTS
 from api.routes_tailscale import tailscale_bp, ENDPOINTS as TAILSCALE_ENDPOINTS
+from api.routes_wifi import wifi_bp, ENDPOINTS as WIFI_ENDPOINTS
 
 app = Flask(__name__)
 
@@ -45,6 +46,7 @@ ALL_ENDPOINTS = (
     + WIREGUARD_ENDPOINTS
     + PACKAGES_ENDPOINTS
     + TAILSCALE_ENDPOINTS
+    + WIFI_ENDPOINTS
 )
 
 app.register_blueprint(system_bp)
@@ -65,6 +67,7 @@ app.register_blueprint(qos_pipes_bp)
 app.register_blueprint(wireguard_bp)
 app.register_blueprint(packages_bp)
 app.register_blueprint(tailscale_bp)
+app.register_blueprint(wifi_bp)
 
 @app.get("/api/v1/endpoints")
 def api_full_endpoints():
