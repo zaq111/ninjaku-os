@@ -31,7 +31,12 @@ def ensure_table():
             "qos_enabled": "INTEGER DEFAULT 0",
             "qos_download": "TEXT DEFAULT ''",
             "qos_upload": "TEXT DEFAULT ''",
-            "qos_priority": "TEXT DEFAULT 'normal'"
+            "qos_priority": "TEXT DEFAULT 'normal'",
+            "internet": "TEXT DEFAULT 'allow'",
+            "bandwidth": "TEXT DEFAULT 'unlimited'",
+            "dns_filter": "TEXT DEFAULT 'none'",
+            "schedule": "TEXT DEFAULT 'always'",
+            "priority": "TEXT DEFAULT 'normal'"
         }
 
         for col, spec in extra_cols.items():

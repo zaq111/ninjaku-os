@@ -90,30 +90,21 @@ def sync_profiles_to_policies():
 
 
 def list_policies():
-    sync_profiles_to_policies()
+    ensure_table()
 
-    with connect() as db:
-        cur = db.execute("""
-            SELECT profile, internet, bandwidth, dns_filter, schedule, priority,
-                   qos_enabled, qos_download, qos_upload, qos_priority, updated_at
-            FROM policies
-            ORDER BY profile
-        """)
-        rows = cur.fetchall()
+    from lib.profiles_service import list_profiles
 
-    return [{
-        "profile": r[0],
-        "internet": r[1],
-        "bandwidth": r[2],
-        "dns_filter": r[3],
-        "schedule": r[4],
-        "priority": r[5],
-        "qos_enabled": bool(r[6]),
-        "qos_download": r[7],
-        "qos_upload": r[8],
-        "qos_priority": r[9],
-        "updated_at": r[10],
-    } for r in rows]
+    profiles = list_profiles()
+    rows = []
+
+    for prof in profiles:
+        name = prof.get("name")
+        if not name:
+            continue
+        rows.append(resolve(profile=name))
+
+    rows.sort(key=lambda r: r.get("profile", ""))
+    return rows
 
 def set_policy(profile, field, value):
     ensure_table()
@@ -159,6 +150,8 @@ def resolve_policy(mac=None, profile=None):
 def update_policy(profile, data):
     ensure_table()
 
+    profile = (profile or "").strip().lower()
+
     allowed = {
         "internet", "bandwidth", "dns_filter", "schedule", "priority",
         "qos_enabled", "qos_download", "qos_upload", "qos_priority"
@@ -166,11 +159,25 @@ def update_policy(profile, data):
 
     changed = {}
 
-    for k, v in data.items():
-        if k not in allowed:
-            continue
-        r = set_policy(profile, k, v)
-        if r.get("ok"):
+    with connect() as db:
+        db.execute("INSERT OR IGNORE INTO policies(profile) VALUES(?)", (profile,))
+        db.execute("INSERT OR IGNORE INTO profiles(name) VALUES(?)", (profile,))
+
+        for k, v in data.items():
+            if k not in allowed:
+                continue
+
+            if k == "qos_enabled":
+                v = 1 if str(v).lower() in ("1", "true", "yes", "on") else 0
+
+            db.execute(
+                f"UPDATE policies SET {k}=?, updated_at=CURRENT_TIMESTAMP WHERE profile=?",
+                (v, profile)
+            )
+            db.execute(
+                f"UPDATE profiles SET {k}=? WHERE name=?",
+                (v, profile)
+            )
             changed[k] = v
 
     return {
@@ -179,3 +186,4 @@ def update_policy(profile, data):
         "changed": changed,
         "policy": resolve_policy(profile=profile),
     }
+
