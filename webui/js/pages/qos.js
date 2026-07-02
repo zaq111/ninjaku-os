@@ -1,5 +1,59 @@
 window.Pages = window.Pages || {};
 
+
+function cakeMapping(mode) {
+  const maps = {
+    besteffort: [
+      ['Best Effort','CS0-CS7, AFxx, EF','Semua trafik diperlakukan sama (single queue).']
+    ],
+    diffserv3: [
+      ['High / Latency','CS5, EF, CS6, CS7','Gaming, SSH, DNS, VoIP, trafik sensitif latency.'],
+      ['Normal','CS0, AFxx','Web, aplikasi umum, trafik normal.'],
+      ['Low / Bulk','CS1','Background, backup, torrent, trafik rendah prioritas.']
+    ],
+    diffserv4: [
+      ['Voice','CS5, EF, CS6, CS7','VoIP, gaming, DNS, SSH, trafik latency-sensitive.'],
+      ['Video','AF41, AF42, AF43','Streaming/video yang butuh throughput stabil.'],
+      ['Best Effort','CS0','Trafik normal seperti browsing dan aplikasi umum.'],
+      ['Bulk','CS1','Download latar belakang, torrent, update.']
+    ],
+    diffserv8: [
+      ['Network Control','CS7, CS6','Routing protocol, network control.'],
+      ['Voice','EF, CS5','VoIP, gaming, SSH, DNS.'],
+      ['Video','AF41, AF42, AF43','Streaming dan video conference.'],
+      ['Excellent Effort','AF31, AF32, AF33','Aplikasi penting non real-time.'],
+      ['Best Effort','CS0','Browsing, aplikasi umum.'],
+      ['Low Latency','CS4','Interactive applications.'],
+      ['Background','CS2, CS3','Background service.'],
+      ['Bulk','CS1','Download, torrent, backup.']
+    ]
+};
+  return maps[mode] || maps.diffserv4;
+}
+
+function cakeMappingHtml(mode) {
+  const list = cakeMapping(mode);
+  const rows = list.map((r, idx) => `
+    <tr>
+      <td><strong>#${idx + 1}</strong></td>
+      <td><strong>${escapeHtml(r[0])}</strong></td>
+      <td>${escapeHtml(r[1])}</td>
+      <td>${escapeHtml(r[2])}</td>
+    </tr>
+  `).join('');
+
+  return `
+    <div class="cake-map">
+      <div class="muted" style="margin-bottom:8px">Order shown from highest priority to lowest priority.</div>
+      <table class="table">
+        <thead><tr><th>Priority</th><th>CAKE Queue</th><th>DSCP Values</th><th>Meaning</th></tr></thead>
+        <tbody>${rows}</tbody>
+      </table>
+    </div>
+  `;
+}
+
+
 function qosMbps(v) {
   return String(v || '').replace(/mbit|mbps|m/gi, '').trim();
 }
@@ -46,7 +100,7 @@ Pages.qos = {
           <div><label>Upload Speed (Mbps)</label><input id="qos-upload" value="${escapeHtml(qosMbps(c.upload || '90'))}"></div>
 
           <div><label>CAKE Mode</label>
-            <select id="qos-diffserv">
+            <select id="qos-diffserv" onchange="QosActions.updateCakeMap()">
               <option value="besteffort" ${c.diffserv === 'besteffort' ? 'selected' : ''}>Best Effort</option>
               <option value="diffserv3" ${c.diffserv === 'diffserv3' ? 'selected' : ''}>Diffserv 3</option>
               <option value="diffserv4" ${c.diffserv === 'diffserv4' ? 'selected' : ''}>Diffserv 4</option>
@@ -61,6 +115,11 @@ Pages.qos = {
               <option value="limiter_first" ${c.strategy === 'limiter_first' ? 'selected' : ''}>Limiter First</option>
             </select>
           </div>
+        </div>
+
+        <div style="margin-top:16px">
+          <h4>CAKE Queue Mapping Preview</h4>
+          <div id="cake-map-preview">${cakeMappingHtml(c.diffserv || 'diffserv4')}</div>
         </div>
 
         <details style="margin-top:16px">
@@ -120,6 +179,12 @@ Pages.qos = {
 };
 
 window.QosActions = {
+  updateCakeMap() {
+    const mode = document.getElementById('qos-diffserv')?.value || 'diffserv4';
+    const box = document.getElementById('cake-map-preview');
+    if (box) box.innerHTML = cakeMappingHtml(mode);
+  },
+
   readForm() {
     return {
       wan: document.getElementById('qos-wan').value.trim(),

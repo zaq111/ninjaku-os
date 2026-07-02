@@ -88,44 +88,17 @@ def cake_args(rate, direction):
 
 
 def profile_dscp_rules():
-    from lib.device_service import list_devices
-    from lib.policy import resolve
+    """
+    Q1: Disable device-wide DSCP marking.
 
-    devices = list_devices()
-    rules = []
+    Do NOT mark all packets from a device/profile as CS5/CS1.
+    That breaks CAKE diffserv behavior because download, YouTube,
+    game, DNS, etc. from the same device would all enter one queue.
 
-    for d in devices:
-        ip = d.get("ip")
-        profile_name = d.get("profile") or "default"
-
-        if not ip:
-            continue
-
-        policy = resolve(profile=profile_name)
-
-        if not policy.get("qos_enabled"):
-            continue
-
-        mode = policy.get("qos_mode", "priority")
-        if mode not in ("priority", "limiter"):
-            mode = "priority"
-
-        priority = policy.get("qos_priority", "normal")
-
-        c = cfg()
-        if priority == "high":
-            dscp = c.get("map.high", "cs5")
-        elif priority == "low":
-            dscp = c.get("map.low", "cs1")
-        else:
-            dscp = c.get("map.normal", "cs0")
-
-        if not dscp or dscp == "cs0":
-            continue
-
-        rules.append((ip, dscp, profile_name))
-
-    return rules
+    Profile priority will be used only by limiter logic later.
+    Application/protocol marking stays in apply_dscp_marks().
+    """
+    return []
 
 def apply_dscp_marks():
     # Minimal DSCP marking for CAKE diffserv4.

@@ -874,3 +874,12 @@ textarea:disabled {
     grid-template-columns: 1fr;
   }
 }
+
+.cake-map {
+  margin-top: 10px;
+}
+
+.cake-map td:nth-child(2) {
+  font-family: ui-monospace, SFMono-Regular, Menlo, Consolas, monospace;
+  font-size: 12px;
+}

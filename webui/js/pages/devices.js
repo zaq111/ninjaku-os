@@ -1,5 +1,22 @@
 window.Pages = window.Pages || {};
 
+function qosBadge(d) {
+  if (!d.qos_enabled) {
+    return '<span class="muted">QoS off</span>';
+  }
+
+  const mode = d.qos_mode || 'priority';
+  const queue = d.qos_queue_label || '-';
+
+  if (mode === 'limiter') {
+    const down = String(d.qos_download || '0').replace(/mbit|mbps/gi, '') || '0';
+    const up = String(d.qos_upload || '0').replace(/mbit|mbps/gi, '') || '0';
+    return `${UI.badge('Limiter ' + down + '/' + up + ' Mbps', 'orange')}<br><small>${escapeHtml(queue)}</small>`;
+  }
+
+  return `${UI.badge('Priority ' + (d.qos_priority || 'normal'), d.qos_priority === 'high' ? 'green' : 'blue')}<br><small>${escapeHtml(queue)}</small>`;
+}
+
 function deviceIcon(d) {
   const name = `${d.hostname || ''} ${d.alias || ''}`.toLowerCase();
   if (name.includes('android') || name.includes('iphone') || name.includes('samsung') || name.includes('phone')) return '📱';
@@ -37,7 +54,7 @@ Pages.devices = {
         <td>${escapeHtml(d.mac)}</td>
         <td>${UI.badge(d.profile || 'default', 'blue')}</td>
         <td>${UI.badge(d.status || 'unknown', statusColor(d.status))}</td>
-        <td>${escapeHtml(d.policy_bandwidth || '')}</td>
+        <td>${qosBadge(d)}</td>
         <td>
           <button class="soft-button" onclick="DeviceActions.edit('${escapeHtml(d.mac)}')">Edit</button>
         </td>
@@ -54,7 +71,7 @@ Pages.devices = {
 
       ${UI.panel('Recent Devices', `
         <table class="table">
-          <thead><tr><th>Device</th><th>IP Address</th><th>MAC</th><th>Profile</th><th>Status</th><th>Bandwidth</th><th>Action</th></tr></thead>
+          <thead><tr><th>Device</th><th>IP Address</th><th>MAC</th><th>Profile</th><th>Status</th><th>QoS</th><th>Action</th></tr></thead>
           <tbody>${rows || '<tr><td colspan="7">No devices found.</td></tr>'}</tbody>
         </table>
       `, `<button class="primary-button" onclick="DeviceActions.sync()">Sync</button>`)}
@@ -119,7 +136,8 @@ window.DeviceActions = {
               <div><span>Status</span><strong>${escapeHtml(d.status || 'unknown')}</strong></div>
               <div><span>Profile</span><strong>${escapeHtml(d.profile || 'default')}</strong></div>
               <div><span>Internet</span><strong>${escapeHtml(d.policy_internet || '-')}</strong></div>
-              <div><span>Bandwidth</span><strong>${escapeHtml(d.policy_bandwidth || '-')}</strong></div>
+              <div><span>QoS</span><strong>${escapeHtml(d.qos_label || 'QoS off')}</strong></div>
+              <div><span>Queue</span><strong>${escapeHtml(d.qos_queue_label || '-')}</strong></div>
             </div>
 
             <div class="device-dns-panel">

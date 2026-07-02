@@ -144,6 +144,42 @@ def sync():
         "count": len(leases) + len(neighbors),
     }
 
+def qos_label(policy):
+    if not policy.get("qos_enabled"):
+        return {
+            "qos_enabled": False,
+            "qos_label": "QoS off",
+            "qos_queue_label": "-",
+        }
+
+    mode = policy.get("qos_mode", "priority") or "priority"
+    prio = policy.get("qos_priority", "normal") or "normal"
+
+    if prio == "high":
+        queue = "High / Voice"
+    elif prio == "low":
+        queue = "Low / Bulk"
+    else:
+        queue = "Normal / Best Effort"
+
+    if mode == "limiter":
+        down = str(policy.get("qos_download") or "0").replace("mbit", "")
+        up = str(policy.get("qos_upload") or "0").replace("mbit", "")
+        label = f"Limiter {down}/{up} Mbps"
+    else:
+        label = f"Priority {prio}"
+
+    return {
+        "qos_enabled": True,
+        "qos_mode": mode,
+        "qos_priority": prio,
+        "qos_download": policy.get("qos_download", ""),
+        "qos_upload": policy.get("qos_upload", ""),
+        "qos_label": label,
+        "qos_queue_label": queue,
+    }
+
+
 def list_devices():
     ensure_schema()
     with connect() as db:
@@ -158,6 +194,7 @@ def list_devices():
     for r in rows:
         mac = r[0]
         effective_policy = resolve(mac=mac)
+        q = qos_label(effective_policy)
         devices.append({
             "mac": mac,
             "ip": r[1],
@@ -168,6 +205,13 @@ def list_devices():
             "policy_internet": effective_policy.get("internet"),
             "policy_bandwidth": effective_policy.get("bandwidth"),
             "policy_dns": effective_policy.get("dns_filter"),
+            "qos_enabled": q.get("qos_enabled"),
+            "qos_mode": q.get("qos_mode"),
+            "qos_priority": q.get("qos_priority"),
+            "qos_download": q.get("qos_download"),
+            "qos_upload": q.get("qos_upload"),
+            "qos_label": q.get("qos_label"),
+            "qos_queue_label": q.get("qos_queue_label"),
             "last_seen": r[6],
             "seen_count": r[7],
             "status": r[8],
