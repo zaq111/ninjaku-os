@@ -171,6 +171,7 @@ def clear():
     run(["ip", "link", "set", ifb, "down"])
 
     clear_dscp_marks()
+    clear_wifi_profile_limits()
     set("qos.enabled", "false")
     return {"ok": True, "wan": wan, "ifb": ifb}
 
@@ -203,7 +204,9 @@ def apply():
     ])
     down = run(["tc", "qdisc", "replace", "dev", ifb, "root"] + cake_args(c["download"], "download"))
 
-    ok = up["ok"] and redirect["ok"] and down["ok"]
+    wifi_limits = apply_wifi_profile_limits()
+
+    ok = up["ok"] and redirect["ok"] and down["ok"] and wifi_limits.get("ok", False)
     set("qos.enabled", "true" if ok else "false")
 
     return {
@@ -216,6 +219,7 @@ def apply():
         "redirect_result": redirect,
         "download_result": down,
         "dscp_result": dscp,
+        "wifi_profile_limits": wifi_limits,
     }
 
 def set_config(values):
@@ -242,4 +246,142 @@ def status():
         "wan_qdisc": run(["tc", "-s", "qdisc", "show", "dev", wan])["stdout"],
         "ifb_qdisc": run(["tc", "-s", "qdisc", "show", "dev", ifb])["stdout"] if iface_exists(ifb) else "",
         "profile_rules": profile_dscp_rules(),
+        "profile_limit_rules": profile_limit_rules(),
+        "wifi_limit_qdisc": run(["tc", "-s", "qdisc", "show", "dev", "wlan0"])["stdout"] if iface_exists("wlan0") else "",
+        "wifi_ifb_qdisc": run(["tc", "-s", "qdisc", "show", "dev", "ifb-wlan0"])["stdout"] if iface_exists("ifb-wlan0") else "",
+    }
+
+def normalize_mbit(value):
+    v = str(value or "").strip().lower()
+    if not v:
+        return ""
+    if v in ("0", "0mbit", "unlimited", "none", "-"):
+        return ""
+    v = v.replace("mbps", "").replace("mbit", "").replace("m", "").strip()
+    try:
+        n = float(v)
+        if n <= 0:
+            return ""
+        if n.is_integer():
+            return f"{int(n)}mbit"
+        return f"{n}mbit"
+    except Exception:
+        return ""
+
+def profile_limit_rules():
+    from lib.device_service import list_devices
+    from lib.policy import resolve
+
+    rules = []
+    for d in list_devices():
+        ip = d.get("ip")
+        profile = d.get("profile") or "default"
+        if not ip:
+            continue
+
+        pol = resolve(profile=profile)
+        if not pol.get("qos_enabled"):
+            continue
+
+        down = normalize_mbit(pol.get("qos_download"))
+        up = normalize_mbit(pol.get("qos_upload"))
+
+        if down or up:
+            rules.append({
+                "ip": ip,
+                "profile": profile,
+                "download": down,
+                "upload": up,
+            })
+
+    return rules
+
+def clear_wifi_profile_limits():
+    wlan = "wlan0"
+    ifb = "ifb-wlan0"
+
+    run(["tc", "qdisc", "del", "dev", wlan, "root"])
+    run(["tc", "qdisc", "del", "dev", wlan, "ingress"])
+    run(["tc", "qdisc", "del", "dev", ifb, "root"])
+    run(["ip", "link", "set", ifb, "down"])
+    run(["ip", "link", "del", ifb])
+    return {"ok": True}
+
+def apply_wifi_profile_limits():
+    wlan = "wlan0"
+    ifb = "ifb-wlan0"
+    rules = profile_limit_rules()
+
+    clear_wifi_profile_limits()
+
+    if not iface_exists(wlan):
+        return {"ok": True, "skipped": True, "reason": "wlan0 not found", "rules": rules}
+
+    if not rules:
+        return {"ok": True, "rules": []}
+
+    run(["modprobe", "ifb", "numifbs=4"])
+    if not iface_exists(ifb):
+        run(["ip", "link", "add", ifb, "type", "ifb"])
+    run(["ip", "link", "set", ifb, "up"])
+
+    errors = []
+
+    # DOWNLOAD to WiFi clients: router -> wlan0 -> client, match destination IP.
+    cmds = [
+        ["tc", "qdisc", "replace", "dev", wlan, "root", "handle", "1:", "htb", "default", "999"],
+        ["tc", "class", "replace", "dev", wlan, "parent", "1:", "classid", "1:999", "htb", "rate", "1000mbit", "ceil", "1000mbit"],
+        ["tc", "qdisc", "replace", "dev", wlan, "parent", "1:999", "fq_codel"],
+    ]
+
+    # UPLOAD from WiFi clients: client -> wlan0 ingress -> ifb-wlan0, match source IP.
+    cmds += [
+        ["tc", "qdisc", "replace", "dev", wlan, "ingress"],
+        ["tc", "filter", "replace", "dev", wlan, "parent", "ffff:", "protocol", "all", "matchall",
+         "action", "mirred", "egress", "redirect", "dev", ifb],
+        ["tc", "qdisc", "replace", "dev", ifb, "root", "handle", "2:", "htb", "default", "999"],
+        ["tc", "class", "replace", "dev", ifb, "parent", "2:", "classid", "2:999", "htb", "rate", "1000mbit", "ceil", "1000mbit"],
+        ["tc", "qdisc", "replace", "dev", ifb, "parent", "2:999", "fq_codel"],
+    ]
+
+    idx = 10
+    applied = []
+
+    for r in rules:
+        ip = r["ip"]
+
+        if r["download"]:
+            classid = f"1:{idx}"
+            cmds += [
+                ["tc", "class", "replace", "dev", wlan, "parent", "1:", "classid", classid,
+                 "htb", "rate", r["download"], "ceil", r["download"]],
+                ["tc", "qdisc", "replace", "dev", wlan, "parent", classid, "fq_codel"],
+                ["tc", "filter", "replace", "dev", wlan, "protocol", "ip", "parent", "1:", "prio", str(idx),
+                 "u32", "match", "ip", "dst", f"{ip}/32", "flowid", classid],
+            ]
+
+        if r["upload"]:
+            classid = f"2:{idx}"
+            cmds += [
+                ["tc", "class", "replace", "dev", ifb, "parent", "2:", "classid", classid,
+                 "htb", "rate", r["upload"], "ceil", r["upload"]],
+                ["tc", "qdisc", "replace", "dev", ifb, "parent", classid, "fq_codel"],
+                ["tc", "filter", "replace", "dev", ifb, "protocol", "ip", "parent", "2:", "prio", str(idx),
+                 "u32", "match", "ip", "src", f"{ip}/32", "flowid", classid],
+            ]
+
+        applied.append(r)
+        idx += 1
+
+    for cmd in cmds:
+        res = run(cmd)
+        if not res["ok"]:
+            errors.append({"cmd": " ".join(cmd), "stderr": res["stderr"]})
+
+    return {
+        "ok": len(errors) == 0,
+        "errors": errors,
+        "rules": applied,
+        "wlan": wlan,
+        "ifb": ifb,
     }

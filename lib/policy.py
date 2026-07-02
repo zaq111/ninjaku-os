@@ -13,43 +13,52 @@ DEFAULT_POLICY = {
     "qos_priority": "normal",
 }
 
-def resolve(mac=None, profile=None):
-    """
-    Resolve effective policy.
+def ensure_profile_policy_columns():
+    with connect() as db:
+        cols = [r[1] for r in db.execute("PRAGMA table_info(profiles)").fetchall()]
+        extra_cols = {
+            "internet": "TEXT DEFAULT 'allow'",
+            "bandwidth": "TEXT DEFAULT 'unlimited'",
+            "dns_filter": "TEXT DEFAULT 'none'",
+            "schedule": "TEXT DEFAULT 'always'",
+            "priority": "TEXT DEFAULT 'normal'",
+            "qos_enabled": "INTEGER DEFAULT 0",
+            "qos_download": "TEXT DEFAULT ''",
+            "qos_upload": "TEXT DEFAULT ''",
+            "qos_priority": "TEXT DEFAULT 'normal'",
+        }
+        for col, spec in extra_cols.items():
+            if col not in cols:
+                db.execute(f"ALTER TABLE profiles ADD COLUMN {col} {spec}")
 
-    Priority:
-    1. Explicit profile argument
-    2. Device profile from devices table by MAC
-    3. default profile
-    """
+def resolve(mac=None, profile=None):
     selected_profile = profile or "default"
+
+    ensure_profile_policy_columns()
 
     with connect() as db:
         if mac and not profile:
-            cur = db.execute(
+            row = db.execute(
                 "SELECT profile FROM devices WHERE mac=?",
                 (mac.lower(),)
-            )
-            row = cur.fetchone()
+            ).fetchone()
             if row and row[0]:
                 selected_profile = row[0]
 
-        cur = db.execute("""
-            SELECT profile, internet, bandwidth, dns_filter, schedule, priority,
+        p = db.execute("""
+            SELECT name, internet, bandwidth, dns_filter, schedule, priority,
                    qos_enabled, qos_download, qos_upload, qos_priority
-            FROM policies
-            WHERE profile=?
-        """, (selected_profile,))
-        p = cur.fetchone()
+            FROM profiles
+            WHERE name=?
+        """, (selected_profile,)).fetchone()
 
         if not p and selected_profile != "default":
-            cur = db.execute("""
-                SELECT profile, internet, bandwidth, dns_filter, schedule, priority,
+            p = db.execute("""
+                SELECT name, internet, bandwidth, dns_filter, schedule, priority,
                        qos_enabled, qos_download, qos_upload, qos_priority
-                FROM policies
-                WHERE profile='default'
-            """)
-            p = cur.fetchone()
+                FROM profiles
+                WHERE name='default'
+            """).fetchone()
 
     if not p:
         return DEFAULT_POLICY.copy()

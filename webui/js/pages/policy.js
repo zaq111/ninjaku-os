@@ -42,7 +42,7 @@ Pages.policy = {
           <td>${escapeHtml(p.dns_filter)}</td>
           <td>${escapeHtml(p.schedule)}</td>
           <td>${UI.badge(p.qos_enabled ? 'enabled' : 'off', p.qos_enabled ? 'green' : 'orange')}</td>
-          <td>${p.qos_enabled ? `↓ ${escapeHtml(p.qos_download || 'unlimited')} / ↑ ${escapeHtml(p.qos_upload || 'unlimited')}` : '<span class="muted">disabled</span>'}</td>
+          <td>${p.qos_enabled ? `↓ ${escapeHtml(String(p.qos_download || '0').replace('mbit',''))} Mbps / ↑ ${escapeHtml(String(p.qos_upload || '0').replace('mbit',''))} Mbps` : '<span class="muted">disabled</span>'}</td>
           <td>${p.qos_enabled ? escapeHtml(p.qos_priority || 'normal') : '<span class="muted">-</span>'}</td>
           <td><button class="soft-button" onclick="event.stopPropagation(); PolicyActions.edit('${escapeHtml(p.profile)}')">Edit</button></td>
         </tr>
@@ -124,11 +124,11 @@ window.PolicyActions = {
                 Enable QoS priority for this policy
               </label>
 
-              <label>Download Shape</label>
-              <input id="policy-qos-download" value="${escapeHtml(p.qos_download || '')}" placeholder="20mbit" ${p.qos_enabled ? '' : 'disabled'}>
+              <label>Download Limit (Mbps)</label>
+              <input id="policy-qos-download" value="${escapeHtml(p.qos_download || '')}" placeholder="10" ${p.qos_enabled ? '' : 'disabled'}>
 
-              <label>Upload Shape</label>
-              <input id="policy-qos-upload" value="${escapeHtml(p.qos_upload || '')}" placeholder="5mbit" ${p.qos_enabled ? '' : 'disabled'}>
+              <label>Upload Limit (Mbps)</label>
+              <input id="policy-qos-upload" value="${escapeHtml(p.qos_upload || '')}" placeholder="2" ${p.qos_enabled ? '' : 'disabled'}>
 
               <label>QoS Priority</label>
               <select id="policy-qos-priority" ${p.qos_enabled ? '' : 'disabled'}>
