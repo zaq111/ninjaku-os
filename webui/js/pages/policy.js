@@ -43,7 +43,7 @@ Pages.policy = {
           <td>${escapeHtml(p.schedule)}</td>
           <td>${UI.badge(p.qos_enabled ? 'enabled' : 'off', p.qos_enabled ? 'green' : 'orange')}</td>
           <td>${p.qos_enabled ? `↓ ${escapeHtml(String(p.qos_download || '0').replace('mbit',''))} Mbps / ↑ ${escapeHtml(String(p.qos_upload || '0').replace('mbit',''))} Mbps` : '<span class="muted">disabled</span>'}</td>
-          <td>${p.qos_enabled ? escapeHtml(p.qos_priority || 'normal') : '<span class="muted">-</span>'}</td>
+          <td>${p.qos_enabled ? escapeHtml((p.qos_mode || 'priority') + ' / ' + (p.qos_priority || 'normal')) : '<span class="muted">-</span>'}</td>
           <td><button class="soft-button" onclick="event.stopPropagation(); PolicyActions.edit('${escapeHtml(p.profile)}')">Edit</button></td>
         </tr>
         <tbody id="policy-devices-${escapeHtml(p.profile)}" class="policy-devices hidden">
@@ -124,6 +124,12 @@ window.PolicyActions = {
                 Enable QoS priority for this policy
               </label>
 
+              <label>QoS Mode</label>
+              <select id="policy-qos-mode" ${p.qos_enabled ? '' : 'disabled'}>
+                <option value="priority" ${(p.qos_mode || 'priority') === 'priority' ? 'selected' : ''}>Priority / Marking</option>
+                <option value="limiter" ${(p.qos_mode || 'priority') === 'limiter' ? 'selected' : ''}>Limiter</option>
+              </select>
+
               <label>Download Limit (Mbps)</label>
               <input id="policy-qos-download" value="${escapeHtml(p.qos_download || '')}" placeholder="10" ${p.qos_enabled ? '' : 'disabled'}>
 
@@ -149,7 +155,7 @@ window.PolicyActions = {
 
   toggleQosFields() {
     const enabled = document.getElementById('policy-qos-enabled').checked;
-    for (const id of ['policy-qos-download', 'policy-qos-upload', 'policy-qos-priority']) {
+    for (const id of ['policy-qos-mode', 'policy-qos-download', 'policy-qos-upload', 'policy-qos-priority']) {
       const el = document.getElementById(id);
       if (el) el.disabled = !enabled;
     }
@@ -166,6 +172,7 @@ window.PolicyActions = {
       dns_filter: document.getElementById('policy-dns').value,
       schedule: document.getElementById('policy-schedule').value.trim(),
       qos_enabled: document.getElementById('policy-qos-enabled').checked,
+      qos_mode: document.getElementById('policy-qos-mode').value,
       qos_download: document.getElementById('policy-qos-download').value.trim(),
       qos_upload: document.getElementById('policy-qos-upload').value.trim(),
       qos_priority: document.getElementById('policy-qos-priority').value

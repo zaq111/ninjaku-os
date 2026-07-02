@@ -32,6 +32,7 @@ def ensure_table():
             "qos_download": "TEXT DEFAULT ''",
             "qos_upload": "TEXT DEFAULT ''",
             "qos_priority": "TEXT DEFAULT 'normal'",
+            "qos_mode": "TEXT DEFAULT 'priority'",
             "internet": "TEXT DEFAULT 'allow'",
             "bandwidth": "TEXT DEFAULT 'unlimited'",
             "dns_filter": "TEXT DEFAULT 'none'",

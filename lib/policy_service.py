@@ -111,7 +111,7 @@ def set_policy(profile, field, value):
 
     allowed = {
         "internet", "bandwidth", "dns_filter", "schedule", "priority",
-        "qos_enabled", "qos_download", "qos_upload", "qos_priority"
+        "qos_enabled", "qos_download", "qos_upload", "qos_priority", "qos_mode"
     }
     if field not in allowed:
         return {"ok": False, "error": "field not allowed"}
@@ -154,7 +154,7 @@ def update_policy(profile, data):
 
     allowed = {
         "internet", "bandwidth", "dns_filter", "schedule", "priority",
-        "qos_enabled", "qos_download", "qos_upload", "qos_priority"
+        "qos_enabled", "qos_download", "qos_upload", "qos_priority", "qos_mode"
     }
 
     changed = {}

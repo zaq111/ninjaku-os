@@ -11,6 +11,7 @@ DEFAULT_POLICY = {
     "qos_download": "",
     "qos_upload": "",
     "qos_priority": "normal",
+    "qos_mode": "priority",
 }
 
 def ensure_profile_policy_columns():
@@ -26,6 +27,7 @@ def ensure_profile_policy_columns():
             "qos_download": "TEXT DEFAULT ''",
             "qos_upload": "TEXT DEFAULT ''",
             "qos_priority": "TEXT DEFAULT 'normal'",
+            "qos_mode": "TEXT DEFAULT 'priority'",
         }
         for col, spec in extra_cols.items():
             if col not in cols:
@@ -47,7 +49,7 @@ def resolve(mac=None, profile=None):
 
         p = db.execute("""
             SELECT name, internet, bandwidth, dns_filter, schedule, priority,
-                   qos_enabled, qos_download, qos_upload, qos_priority
+                   qos_enabled, qos_download, qos_upload, qos_priority, qos_mode
             FROM profiles
             WHERE name=?
         """, (selected_profile,)).fetchone()
@@ -55,7 +57,7 @@ def resolve(mac=None, profile=None):
         if not p and selected_profile != "default":
             p = db.execute("""
                 SELECT name, internet, bandwidth, dns_filter, schedule, priority,
-                       qos_enabled, qos_download, qos_upload, qos_priority
+                       qos_enabled, qos_download, qos_upload, qos_priority, qos_mode
                 FROM profiles
                 WHERE name='default'
             """).fetchone()
@@ -74,4 +76,5 @@ def resolve(mac=None, profile=None):
         "qos_download": p[7],
         "qos_upload": p[8],
         "qos_priority": p[9],
+        "qos_mode": p[10] if len(p) > 10 and p[10] else "priority",
     }

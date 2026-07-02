@@ -101,6 +101,10 @@ def profile_dscp_rules():
         if not policy.get("qos_enabled"):
             continue
 
+        mode = policy.get("qos_mode", "priority")
+        if mode not in ("priority", "limiter"):
+            mode = "priority"
+
         priority = policy.get("qos_priority", "normal")
 
         if priority == "high":
@@ -281,6 +285,9 @@ def profile_limit_rules():
 
         pol = resolve(profile=profile)
         if not pol.get("qos_enabled"):
+            continue
+
+        if pol.get("qos_mode", "priority") != "limiter":
             continue
 
         down = normalize_mbit(pol.get("qos_download"))
