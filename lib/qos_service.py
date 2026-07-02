@@ -281,6 +281,7 @@ def profile_limit_rules():
                 "profile": profile,
                 "download": down,
                 "upload": up,
+                "priority": pol.get("qos_priority", "normal"),
             })
 
     return rules

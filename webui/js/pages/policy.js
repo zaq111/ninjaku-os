@@ -125,10 +125,11 @@ window.PolicyActions = {
               </label>
 
               <label>QoS Mode</label>
-              <select id="policy-qos-mode" ${p.qos_enabled ? '' : 'disabled'}>
+              <select id="policy-qos-mode" ${p.qos_enabled ? '' : 'disabled'} onchange="PolicyActions.toggleQosFields()">
                 <option value="priority" ${(p.qos_mode || 'priority') === 'priority' ? 'selected' : ''}>Priority / Marking</option>
                 <option value="limiter" ${(p.qos_mode || 'priority') === 'limiter' ? 'selected' : ''}>Limiter</option>
               </select>
+              <small id="policy-qos-mode-help" class="muted"></small>
 
               <label>Download Limit (Mbps)</label>
               <input id="policy-qos-download" value="${escapeHtml(p.qos_download || '')}" placeholder="10" ${p.qos_enabled ? '' : 'disabled'}>
@@ -151,13 +152,40 @@ window.PolicyActions = {
         </div>
       </div>
     `;
+
+    setTimeout(() => PolicyActions.toggleQosFields(), 0);
   },
 
   toggleQosFields() {
     const enabled = document.getElementById('policy-qos-enabled').checked;
-    for (const id of ['policy-qos-mode', 'policy-qos-download', 'policy-qos-upload', 'policy-qos-priority']) {
-      const el = document.getElementById(id);
-      if (el) el.disabled = !enabled;
+    const mode = document.getElementById('policy-qos-mode')?.value || 'priority';
+
+    const modeEl = document.getElementById('policy-qos-mode');
+    const downEl = document.getElementById('policy-qos-download');
+    const upEl = document.getElementById('policy-qos-upload');
+    const prioEl = document.getElementById('policy-qos-priority');
+    const helpEl = document.getElementById('policy-qos-mode-help');
+
+    if (modeEl) modeEl.disabled = !enabled;
+
+    if (!enabled) {
+      if (downEl) downEl.disabled = true;
+      if (upEl) upEl.disabled = true;
+      if (prioEl) prioEl.disabled = true;
+      if (helpEl) helpEl.textContent = 'QoS disabled for this profile.';
+      return;
+    }
+
+    if (mode === 'limiter') {
+      if (downEl) downEl.disabled = false;
+      if (upEl) upEl.disabled = false;
+      if (prioEl) prioEl.disabled = false;
+      if (helpEl) helpEl.textContent = 'Limiter mode: download/upload limits are enforced. Priority is used inside limiter scheduling.';
+    } else {
+      if (downEl) downEl.disabled = true;
+      if (upEl) upEl.disabled = true;
+      if (prioEl) prioEl.disabled = true;
+      if (helpEl) helpEl.textContent = 'Marking mode: uses global CAKE/application marking. No per-device priority or bandwidth limit.';
     }
   },
 
