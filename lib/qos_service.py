@@ -15,6 +15,10 @@ DEFAULTS = {
     "qos.overhead": "0",
     "qos.mpu": "0",
     "qos.rtt": "",
+    "qos.strategy": "balanced",
+    "qos.map.high": "cs5",
+    "qos.map.normal": "cs0",
+    "qos.map.low": "cs1",
 }
 
 def ensure_defaults():
@@ -46,6 +50,7 @@ def load_modules():
 
 def cake_args(rate, direction):
     c = cfg()
+    rate = normalize_mbit(rate) or "90mbit"
     args = ["cake", "bandwidth", rate]
 
     if c["diffserv"]:
@@ -107,11 +112,15 @@ def profile_dscp_rules():
 
         priority = policy.get("qos_priority", "normal")
 
+        c = cfg()
         if priority == "high":
-            dscp = "cs5"
+            dscp = c.get("map.high", "cs5")
         elif priority == "low":
-            dscp = "cs1"
+            dscp = c.get("map.low", "cs1")
         else:
+            dscp = c.get("map.normal", "cs0")
+
+        if not dscp or dscp == "cs0":
             continue
 
         rules.append((ip, dscp, profile_name))
