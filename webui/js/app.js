@@ -93,4 +93,5 @@ window.Ninjaku = {
 };
 
 window.addEventListener('DOMContentLoaded', () => Ninjaku.init());
-setInterval(() => Ninjaku.refresh(), 10000);
+// Full page auto-refresh disabled: it interrupts forms and causes page blinking.
+// Pages that need live data should implement their own lightweight polling.

@@ -72,8 +72,25 @@ def ensure_table():
                 p["priority"],
             ))
 
-def list_policies():
+def sync_profiles_to_policies():
+    from lib.profiles_service import list_profiles
     ensure_table()
+    with connect() as db:
+        for prof in list_profiles():
+            name = prof.get("name")
+            if not name:
+                continue
+            db.execute("""
+                INSERT OR IGNORE INTO policies
+                (profile, internet, bandwidth, dns_filter, schedule, priority,
+                 qos_enabled, qos_download, qos_upload, qos_priority)
+                VALUES (?, 'allow', 'unlimited', 'none', 'always', 'normal',
+                        0, '', '', 'normal')
+            """, (name,))
+
+
+def list_policies():
+    sync_profiles_to_policies()
 
     with connect() as db:
         cur = db.execute("""
