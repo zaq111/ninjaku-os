@@ -192,7 +192,8 @@ def apply_policy():
 
         qos = None
         try:
-            qos = module_execute("qos", "apply")
+            from lib import qos_service
+            qos = qos_service._apply_unlocked()
         except Exception as e:
             qos = {"ok": False, "error": str(e)}
 
