@@ -93,7 +93,7 @@ def nat_up():
     lan = c["lan"]
 
     ruleset = f"""
-table inet ninjaku {{
+table inet ninjaku_gateway {{
     chain input {{
         type filter hook input priority 0; policy accept;
         iif "lo" accept
@@ -116,12 +116,12 @@ table inet ninjaku {{
     }}
 }}
 """
-    run(["nft", "delete", "table", "inet", "ninjaku"])
+    run(["nft", "delete", "table", "inet", "ninjaku_gateway"])
     r = run(["nft", "-f", "-"], input_text=ruleset)
     return {"ok": r["ok"], "stdout": r["stdout"], "stderr": r["stderr"]}
 
 def nat_down():
-    r = run(["nft", "delete", "table", "inet", "ninjaku"])
+    r = run(["nft", "delete", "table", "inet", "ninjaku_gateway"])
     ok = r["ok"] or "No such file or directory" in r["stderr"]
     return {"ok": ok, "stdout": r["stdout"], "stderr": r["stderr"]}
 
@@ -238,7 +238,7 @@ def ensure_gateway():
         subnet_nat_rules.append(f'        ip saddr {subnet} oifname "{wan}" masquerade')
 
     ruleset = f"""
-table inet ninjaku {{
+table inet ninjaku_gateway {{
     chain input {{
         type filter hook input priority 0; policy accept;
         iifname "lo" accept
@@ -262,7 +262,7 @@ table inet ninjaku {{
 }}
 """
 
-    run(["nft", "delete", "table", "inet", "ninjaku"])
+    run(["nft", "delete", "table", "inet", "ninjaku_gateway"])
     nft = run(["nft", "-f", "-"], input_text=ruleset)
     results["nft_apply"] = {
         "ok": nft.get("ok", False),
@@ -270,7 +270,7 @@ table inet ninjaku {{
         "stderr": nft.get("stderr", ""),
     }
 
-    verify = run(["nft", "list", "table", "inet", "ninjaku"])
+    verify = run(["nft", "list", "table", "inet", "ninjaku_gateway"])
     results["verify"] = {
         "ok": verify.get("ok", False),
         "stdout": verify.get("stdout", ""),
