@@ -185,21 +185,25 @@ def disable_router():
 
 def ensure_gateway():
     """
-    Ensure Ninjaku acts as an IPv4 gateway.
+    Ensure Ninjaku acts as an IPv4 gateway using nftables native rules.
 
     Idempotent:
     - enable ip_forward
-    - ensure FORWARD rules
-    - ensure MASQUERADE for router LAN and WiFi subnet
+    - create/update table inet ninjaku
+    - allow subnet -> WAN forwarding
+    - allow established WAN -> subnet forwarding
+    - masquerade LAN/WiFi subnets to WAN
     """
-    results = {}
+    import ipaddress
+    import builtins
 
+    results = {}
     wan = cfg("router.wan")
 
     subnets = []
+
     lan_ip = cfg("router.lan_ip")
     if lan_ip:
-        import ipaddress
         try:
             subnets.append(str(ipaddress.ip_interface(lan_ip).network))
         except Exception:
@@ -210,16 +214,14 @@ def ensure_gateway():
         wifi = get_config()
         wifi_ip = wifi.get("ip")
         if wifi_ip:
-            import ipaddress
             subnets.append(str(ipaddress.ip_interface(wifi_ip).network))
     except Exception:
         pass
 
-    subnets = sorted(__import__('builtins').set(subnets))
+    subnets = sorted(builtins.set(subnets))
 
     results["forward_on"] = enable_forward()
 
-    # Persist ip_forward.
     try:
         with open("/etc/sysctl.d/99-ninjaku-router.conf", "w") as f:
             f.write("net.ipv4.ip_forward=1\n")
@@ -227,39 +229,53 @@ def ensure_gateway():
     except Exception as e:
         results["forward_persist"] = {"ok": False, "error": str(e)}
 
-    def ensure_rule(name, check_cmd, add_cmd):
-        c = run(check_cmd)
-        if c.get("ok"):
-            return {"ok": True, "exists": True}
-
-        a = run(add_cmd)
-        return {
-            "ok": a.get("ok", False),
-            "exists": False,
-            "stdout": a.get("stdout", ""),
-            "stderr": a.get("stderr", ""),
-        }
+    subnet_forward_rules = []
+    subnet_nat_rules = []
 
     for subnet in subnets:
-        key = subnet.replace("/", "_").replace(".", "_")
+        subnet_forward_rules.append(f'        ip saddr {subnet} oifname "{wan}" accept')
+        subnet_forward_rules.append(f'        ip daddr {subnet} iifname "{wan}" ct state established,related accept')
+        subnet_nat_rules.append(f'        ip saddr {subnet} oifname "{wan}" masquerade')
 
-        results[f"nat_{key}"] = ensure_rule(
-            f"nat_{subnet}",
-            ["iptables", "-t", "nat", "-C", "POSTROUTING", "-s", subnet, "-o", wan, "-j", "MASQUERADE"],
-            ["iptables", "-t", "nat", "-A", "POSTROUTING", "-s", subnet, "-o", wan, "-j", "MASQUERADE"],
-        )
+    ruleset = f"""
+table inet ninjaku {{
+    chain input {{
+        type filter hook input priority 0; policy accept;
+        iifname "lo" accept
+        ct state established,related accept
+    }}
 
-        results[f"forward_out_{key}"] = ensure_rule(
-            f"forward_out_{subnet}",
-            ["iptables", "-C", "FORWARD", "-s", subnet, "-o", wan, "-j", "ACCEPT"],
-            ["iptables", "-A", "FORWARD", "-s", subnet, "-o", wan, "-j", "ACCEPT"],
-        )
+    chain forward {{
+        type filter hook forward priority 0; policy accept;
+        ct state established,related accept
+{chr(10).join(subnet_forward_rules)}
+    }}
 
-        results[f"forward_back_{key}"] = ensure_rule(
-            f"forward_back_{subnet}",
-            ["iptables", "-C", "FORWARD", "-d", subnet, "-i", wan, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"],
-            ["iptables", "-A", "FORWARD", "-d", subnet, "-i", wan, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"],
-        )
+    chain output {{
+        type filter hook output priority 0; policy accept;
+    }}
+
+    chain postrouting {{
+        type nat hook postrouting priority srcnat; policy accept;
+{chr(10).join(subnet_nat_rules)}
+    }}
+}}
+"""
+
+    run(["nft", "delete", "table", "inet", "ninjaku"])
+    nft = run(["nft", "-f", "-"], input_text=ruleset)
+    results["nft_apply"] = {
+        "ok": nft.get("ok", False),
+        "stdout": nft.get("stdout", ""),
+        "stderr": nft.get("stderr", ""),
+    }
+
+    verify = run(["nft", "list", "table", "inet", "ninjaku"])
+    results["verify"] = {
+        "ok": verify.get("ok", False),
+        "stdout": verify.get("stdout", ""),
+        "stderr": verify.get("stderr", ""),
+    }
 
     return {
         "ok": all(v.get("ok", False) for v in results.values()),
