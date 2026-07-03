@@ -188,4 +188,16 @@ from lib.apply_lock import apply_lock
 
 def apply_policy():
     with apply_lock():
-        return _apply_policy_unlocked()
+        firewall = _apply_policy_unlocked()
+
+        qos = None
+        try:
+            qos = module_execute("qos", "apply")
+        except Exception as e:
+            qos = {"ok": False, "error": str(e)}
+
+        return {
+            "ok": bool(firewall.get("ok", False)) and bool(qos.get("ok", False)),
+            "firewall": firewall,
+            "qos": qos,
+        }
