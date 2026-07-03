@@ -72,7 +72,6 @@ def main():
     while True:
         time.sleep(HEARTBEAT_SECONDS)
         restore_router_if_needed()
-        restore_router_if_needed()
         discover_devices()
 
 if __name__ == "__main__":
