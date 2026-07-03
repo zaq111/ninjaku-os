@@ -241,8 +241,14 @@ def start():
 
     r = run(["systemctl", "restart", "hostapd"], timeout=30)
 
+    gateway_result = None
     if r["ok"]:
         update_config({"enabled": True})
+        try:
+            from lib.router_service import ensure_gateway
+            gateway_result = ensure_gateway()
+        except Exception as e:
+            gateway_result = {"ok": False, "error": str(e)}
 
     return {
         "ok": r["ok"],
@@ -250,6 +256,7 @@ def start():
         "stderr": r["stderr"],
         "config": cfg_written,
         "ip": ip_result,
+        "gateway": gateway_result,
         "status": status(),
     }
 

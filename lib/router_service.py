@@ -138,8 +138,7 @@ def enable_router():
         set("firewall.enabled", "false")
         return {"ok": False, "state": get("router.state", "waiting_for_lan"), "results": results}
 
-    results["forward_on"] = enable_forward()
-    results["nat_up"] = nat_up()
+    results["gateway"] = ensure_gateway()
 
     dhcp = run(["systemctl", "restart", "dnsmasq"])
     results["dhcp_restart"] = {
@@ -183,3 +182,89 @@ def disable_router():
     set("firewall.enabled", "false")
 
     return {"ok": ok, "results": results}
+
+def ensure_gateway():
+    """
+    Ensure Ninjaku acts as an IPv4 gateway.
+
+    Idempotent:
+    - enable ip_forward
+    - ensure FORWARD rules
+    - ensure MASQUERADE for router LAN and WiFi subnet
+    """
+    results = {}
+
+    wan = cfg("router.wan")
+
+    subnets = []
+    lan_ip = cfg("router.lan_ip")
+    if lan_ip:
+        import ipaddress
+        try:
+            subnets.append(str(ipaddress.ip_interface(lan_ip).network))
+        except Exception:
+            pass
+
+    try:
+        from lib.wifi_service import get_config
+        wifi = get_config()
+        wifi_ip = wifi.get("ip")
+        if wifi_ip:
+            import ipaddress
+            subnets.append(str(ipaddress.ip_interface(wifi_ip).network))
+    except Exception:
+        pass
+
+    subnets = sorted(__import__('builtins').set(subnets))
+
+    results["forward_on"] = enable_forward()
+
+    # Persist ip_forward.
+    try:
+        with open("/etc/sysctl.d/99-ninjaku-router.conf", "w") as f:
+            f.write("net.ipv4.ip_forward=1\n")
+        results["forward_persist"] = {"ok": True}
+    except Exception as e:
+        results["forward_persist"] = {"ok": False, "error": str(e)}
+
+    def ensure_rule(name, check_cmd, add_cmd):
+        c = run(check_cmd)
+        if c.get("ok"):
+            return {"ok": True, "exists": True}
+
+        a = run(add_cmd)
+        return {
+            "ok": a.get("ok", False),
+            "exists": False,
+            "stdout": a.get("stdout", ""),
+            "stderr": a.get("stderr", ""),
+        }
+
+    for subnet in subnets:
+        key = subnet.replace("/", "_").replace(".", "_")
+
+        results[f"nat_{key}"] = ensure_rule(
+            f"nat_{subnet}",
+            ["iptables", "-t", "nat", "-C", "POSTROUTING", "-s", subnet, "-o", wan, "-j", "MASQUERADE"],
+            ["iptables", "-t", "nat", "-A", "POSTROUTING", "-s", subnet, "-o", wan, "-j", "MASQUERADE"],
+        )
+
+        results[f"forward_out_{key}"] = ensure_rule(
+            f"forward_out_{subnet}",
+            ["iptables", "-C", "FORWARD", "-s", subnet, "-o", wan, "-j", "ACCEPT"],
+            ["iptables", "-A", "FORWARD", "-s", subnet, "-o", wan, "-j", "ACCEPT"],
+        )
+
+        results[f"forward_back_{key}"] = ensure_rule(
+            f"forward_back_{subnet}",
+            ["iptables", "-C", "FORWARD", "-d", subnet, "-i", wan, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"],
+            ["iptables", "-A", "FORWARD", "-d", subnet, "-i", wan, "-m", "conntrack", "--ctstate", "RELATED,ESTABLISHED", "-j", "ACCEPT"],
+        )
+
+    return {
+        "ok": all(v.get("ok", False) for v in results.values()),
+        "wan": wan,
+        "subnets": subnets,
+        "results": results,
+        "ip_forward": run(["cat", "/proc/sys/net/ipv4/ip_forward"])["stdout"],
+    }

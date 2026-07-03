@@ -19,6 +19,9 @@ def execute(command, **kwargs):
     if command == "nat-down":
         return router_service.nat_down()
 
+    if command == "ensure-gateway":
+        return router_service.ensure_gateway()
+
     if command == "enable":
         return router_service.enable_router()
 
