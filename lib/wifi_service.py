@@ -229,7 +229,7 @@ def apply_ip():
 
     return {"ok": True, "interface": iface, "ip": ip}
 
-def start():
+def _start_unlocked():
     cfg_written = write_hostapd_config()
     if not cfg_written.get("ok"):
         return cfg_written
@@ -260,7 +260,7 @@ def start():
         "status": status(),
     }
 
-def stop():
+def _stop_unlocked():
     r = run(["systemctl", "stop", "hostapd"], timeout=30)
 
     if r["ok"]:
@@ -347,3 +347,16 @@ def stations():
         "stations":stations
     }
 
+
+
+# NINJAKU APPLY LOCK WRAPPERS
+
+from lib.apply_lock import apply_lock
+
+def start():
+    with apply_lock():
+        return _start_unlocked()
+
+def stop():
+    with apply_lock():
+        return _stop_unlocked()

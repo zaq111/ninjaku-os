@@ -155,7 +155,7 @@ def clear_dscp_marks():
     return {"ok": True}
 
 
-def clear():
+def _clear_unlocked():
     c = cfg()
     wan = c["wan"]
     ifb = c["ifb"]
@@ -170,7 +170,7 @@ def clear():
     set("qos.enabled", "false")
     return {"ok": True, "wan": wan, "ifb": ifb}
 
-def apply():
+def _apply_unlocked():
     c = cfg()
     wan = c["wan"]
     ifb = c["ifb"]
@@ -549,3 +549,16 @@ def qos_queue_runtime(limit=80):
         "count": len(rows),
         "flows": rows,
     }
+
+
+# NINJAKU APPLY LOCK WRAPPERS
+
+from lib.apply_lock import apply_lock
+
+def apply():
+    with apply_lock():
+        return _apply_unlocked()
+
+def clear():
+    with apply_lock():
+        return _clear_unlocked()

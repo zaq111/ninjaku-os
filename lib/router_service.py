@@ -125,7 +125,7 @@ def nat_down():
     ok = r["ok"] or "No such file or directory" in r["stderr"]
     return {"ok": ok, "stdout": r["stdout"], "stderr": r["stderr"]}
 
-def enable_router():
+def _enable_router_unlocked():
     set("router.state", "restoring")
     results = {}
 
@@ -172,7 +172,7 @@ def enable_router():
 
     return {"ok": ok, "results": results}
 
-def disable_router():
+def _disable_router_unlocked():
     set("router.state", "stopping")
     results = {}
 
@@ -296,3 +296,16 @@ table inet ninjaku_gateway {{
         "results": results,
         "ip_forward": run(["cat", "/proc/sys/net/ipv4/ip_forward"])["stdout"],
     }
+
+
+# NINJAKU APPLY LOCK WRAPPERS
+
+from lib.apply_lock import apply_lock
+
+def enable_router():
+    with apply_lock():
+        return _enable_router_unlocked()
+
+def disable_router():
+    with apply_lock():
+        return _disable_router_unlocked()

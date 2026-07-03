@@ -128,7 +128,7 @@ def set_policy(profile, field, value):
 
     return {"ok": True, "profile": profile, "field": field, "value": value}
 
-def apply_policy():
+def _apply_policy_unlocked():
     firewall = module_execute("firewall", "apply-policy")
 
     return {
@@ -180,3 +180,12 @@ def update_policy(profile, data):
         "policy": resolve_policy(profile=profile),
     }
 
+
+
+# NINJAKU APPLY LOCK WRAPPERS
+
+from lib.apply_lock import apply_lock
+
+def apply_policy():
+    with apply_lock():
+        return _apply_policy_unlocked()
