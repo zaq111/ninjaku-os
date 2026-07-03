@@ -140,6 +140,18 @@ def enable_router():
 
     results["gateway"] = ensure_gateway()
 
+    try:
+        from lib import firewall_service
+        results["firewall_policy"] = firewall_service.apply_policy()
+    except Exception as e:
+        results["firewall_policy"] = {"ok": False, "error": str(e)}
+
+    try:
+        from lib import qos_service
+        results["qos_apply"] = qos_service.apply()
+    except Exception as e:
+        results["qos_apply"] = {"ok": False, "error": str(e)}
+
     dhcp = run(["systemctl", "restart", "dnsmasq"])
     results["dhcp_restart"] = {
         "ok": dhcp["ok"],
