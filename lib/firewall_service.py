@@ -4,7 +4,7 @@ from lib.policy import resolve
 from lib.settings import get
 
 BASE_RULESET = r"""
-table inet ninjaku {
+table inet ninjaku_policy {
     chain input {
         type filter hook input priority 0; policy accept;
         iif "lo" accept
@@ -31,12 +31,12 @@ def status():
     }
 
 def init():
-    run(["nft", "delete", "table", "inet", "ninjaku"], timeout=5)
+    run(["nft", "delete", "table", "inet", "ninjaku_policy"], timeout=5)
     p = run(["nft", "-f", "-"], timeout=5, input_text=BASE_RULESET)
     return {"ok": p["ok"], "stdout": p["stdout"], "stderr": p["stderr"]}
 
 def reset():
-    p = run(["nft", "delete", "table", "inet", "ninjaku"], timeout=5)
+    p = run(["nft", "delete", "table", "inet", "ninjaku_policy"], timeout=5)
     ok = p["ok"] or "No such file or directory" in p["stderr"]
     return {"ok": ok, "stdout": p["stdout"], "stderr": p["stderr"]}
 
@@ -65,40 +65,21 @@ def blocked_devices():
 def apply_policy():
     blocked = blocked_devices()
 
-    wan = get("router.wan", "eth0")
-    lan = get("router.lan", "eth1")
-
-    rules = f"""
-table inet ninjaku {{
-    chain input {{
-        type filter hook input priority 0; policy accept;
-        iif "lo" accept
-        ct state established,related accept
-    }}
-
-    chain forward {{
-        type filter hook forward priority 0; policy accept;
+    rules = """
+table inet ninjaku_policy {
+    chain forward {
+        type filter hook forward priority -10; policy accept;
         ct state established,related accept
 """
 
     for dev in blocked:
         rules += f'        ip saddr {dev["ip"]} drop\n'
 
-    rules += f"""        iif "{lan}" oif "{wan}" accept
-    }}
-
-    chain output {{
-        type filter hook output priority 0; policy accept;
-    }}
-
-    chain postrouting {{
-        type nat hook postrouting priority srcnat; policy accept;
-        oif "{wan}" masquerade
-    }}
-}}
+    rules += """    }
+}
 """
 
-    run(["nft", "delete", "table", "inet", "ninjaku"], timeout=5)
+    run(["nft", "delete", "table", "inet", "ninjaku_policy"], timeout=5)
     p = run(["nft", "-f", "-"], timeout=5, input_text=rules)
 
     return {
