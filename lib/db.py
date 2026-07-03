@@ -33,7 +33,12 @@ CREATE TABLE IF NOT EXISTS devices (
 
 def connect():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
-    return sqlite3.connect(DB_PATH)
+
+    db = sqlite3.connect(DB_PATH, timeout=30)
+    db.execute("PRAGMA journal_mode=WAL")
+    db.execute("PRAGMA busy_timeout=30000")
+    db.execute("PRAGMA foreign_keys=ON")
+    return db
 
 def init_db():
     with connect() as db:
