@@ -280,13 +280,55 @@ def _apply_unlocked():
         "stage_results": results,
     }
 
+VALID_STRATEGIES = {"balanced", "priority_first", "limiter_first"}
+VALID_DIFFSERV = {"besteffort", "diffserv3", "diffserv4", "diffserv8"}
+
+def validate_rate_value(value):
+    raw = str(value or "").strip().lower()
+    if raw in ("", "0", "0mbit", "unlimited", "none", "-"):
+        return True
+
+    normalized = normalize_mbit(raw)
+    if not normalized:
+        return False
+
+    try:
+        n = float(normalized.replace("mbit", ""))
+        return 0 < n <= 10000
+    except Exception:
+        return False
+
+def validate_qos_config(values):
+    errors = {}
+
+    if "strategy" in values and str(values["strategy"]) not in VALID_STRATEGIES:
+        errors["strategy"] = "must be one of: balanced, priority_first, limiter_first"
+
+    if "diffserv" in values and str(values["diffserv"]) not in VALID_DIFFSERV:
+        errors["diffserv"] = "must be one of: besteffort, diffserv3, diffserv4, diffserv8"
+
+    for key in ("download", "upload"):
+        if key in values and not validate_rate_value(values[key]):
+            errors[key] = "must be a positive Mbps value, mbit value, unlimited, none, or 0"
+
+    return errors
+
+
 def set_config(values):
     allowed = {k.replace("qos.", "") for k in DEFAULTS.keys()}
-    changed = {}
+    cleaned = {k: v for k, v in values.items() if k in allowed}
 
-    for k, v in values.items():
-        if k not in allowed:
-            continue
+    errors = validate_qos_config(cleaned)
+    if errors:
+        return {
+            "ok": False,
+            "error": "validation failed",
+            "errors": errors,
+            "config": cfg(),
+        }
+
+    changed = {}
+    for k, v in cleaned.items():
         set("qos." + k, str(v))
         changed[k] = str(v)
 
