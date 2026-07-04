@@ -249,18 +249,20 @@ def set_config(values):
 def qos_runtime_state():
     c = cfg()
     limits = profile_limit_rules()
+    qos_on = get("qos.enabled", "false") == "true"
+    limiter_on = qos_on and len(limits) > 0
 
     return {
         "strategy_configured": c.get("strategy", "balanced"),
-        "strategy_effective": c.get("strategy", "balanced"),
-        "strategy_active": True,
-        "strategy_note": "Processing strategy changes tc limiter filter priority mapping.",
-        "limiter_active": len(limits) > 0,
+        "strategy_effective": c.get("strategy", "balanced") if limiter_on else "inactive",
+        "strategy_active": limiter_on,
+        "strategy_note": "Strategy currently affects limiter tc filter priority mapping only. It does not change the top-level CAKE/marking apply pipeline.",
+        "limiter_active": limiter_on,
         "limiter_rule_count": len(limits),
-        "limiter_priority_active": True,
-        "limiter_priority_note": "Limiter priority maps to tc filter priority and class buckets: high=1, normal=5, low=9.",
-        "marking_active": True,
-        "diffserv_active": c.get("diffserv", "diffserv4"),
+        "limiter_priority_active": limiter_on,
+        "limiter_priority_note": "Limiter priority is active only when QoS is enabled and limiter rules exist. It maps to tc filter priority and class buckets.",
+        "marking_active": qos_on,
+        "diffserv_active": c.get("diffserv", "diffserv4") if qos_on else "inactive",
     }
 
 

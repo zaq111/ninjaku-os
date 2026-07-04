@@ -163,7 +163,7 @@ Pages.qos = {
             </select>
           </div>
 
-          <div><label>Processing Processing Strategy</label>
+          <div><label>Processing Strategy</label>
             <select id="qos-strategy">
               <option value="balanced" ${c.strategy === 'balanced' ? 'selected' : ''}>Balanced</option>
               <option value="priority_first" ${c.strategy === 'priority_first' ? 'selected' : ''}>Priority First</option>
