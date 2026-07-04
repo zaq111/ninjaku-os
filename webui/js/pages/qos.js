@@ -31,6 +31,57 @@ function cakeMapping(mode) {
   return maps[mode] || maps.diffserv4;
 }
 
+function queueRuntimeHtml(runtime) {
+  const mode = runtime?.mode || 'diffserv4';
+  const flows = runtime?.flows || [];
+  const queues = cakeMapping(mode);
+
+  const summary = queues.map((q, idx) => {
+    const priority = idx + 1;
+    const count = flows.filter(f => Number(f.priority) === priority).length;
+    return `
+      <div class="remote-card">
+        <span>#${priority} ${escapeHtml(q[0])}</span>
+        <strong>${count}</strong>
+      </div>
+    `;
+  }).join('');
+
+  const detail = queues.map((q, idx) => {
+    const priority = idx + 1;
+    const rows = flows
+      .filter(f => Number(f.priority) === priority)
+      .map(f => `
+        <tr>
+          <td><strong>${escapeHtml(f.client_name || f.client_ip || '-')}</strong><br><small>${escapeHtml(f.client_ip || '-')}</small></td>
+          <td>${escapeHtml(f.source || '-')}:${escapeHtml(f.source_port || '')}</td>
+          <td>${escapeHtml(f.destination || '-')}:${escapeHtml(f.destination_port || '')}</td>
+          <td>${escapeHtml((f.proto || '').toUpperCase())}</td>
+          <td>${UI.badge(f.dscp || 'cs0', f.dscp === 'cs5' ? 'green' : (f.dscp === 'cs1' ? 'orange' : 'blue'))}</td>
+          <td>${escapeHtml(f.reason || '-')}</td>
+        </tr>
+      `).join('');
+
+    return `
+      <details class="queue-runtime-box" open>
+        <summary><strong>#${priority} ${escapeHtml(q[0])}</strong> <span class="muted">${rows ? '' : '— No queue'}</span></summary>
+        <div class="muted" style="margin:8px 0">DSCP: ${escapeHtml(q[1])}</div>
+        <table class="table">
+          <thead><tr><th>Client</th><th>Source</th><th>Destination</th><th>Proto</th><th>DSCP</th><th>Reason</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="6" class="muted">No queue.</td></tr>'}</tbody>
+        </table>
+      </details>
+    `;
+  }).join('');
+
+  return `
+    <div class="remote-card-grid" style="margin-bottom:14px">
+      ${summary}
+    </div>
+    ${detail}
+  `;
+}
+
 function cakeMappingHtml(mode) {
   const list = cakeMapping(mode);
   const rows = list.map((r, idx) => `
@@ -60,21 +111,14 @@ function qosMbps(v) {
 
 Pages.qos = {
   title: 'QoS',
-  subtitle: 'Global CAKE shaping, profile priority and limiter runtime.',
+  subtitle: 'Global CAKE shaping, application marking, and profile limiters.',
 
   async render() {
     const data = await NinjakuAPI.get('/qos');
     const c = data.config || {};
-    const priorityRules = data.profile_rules || [];
     const limitRules = data.profile_limit_rules || [];
-
-    const priorityRows = priorityRules.map(r => `
-      <tr>
-        <td><strong>${escapeHtml(r[2])}</strong></td>
-        <td>${escapeHtml(r[0])}</td>
-        <td>${UI.badge(r[1], r[1] === 'cs5' ? 'green' : 'orange')}</td>
-      </tr>
-    `).join('');
+    const globalRules = data.global_marking_rules || [];
+    const queueRuntime = data.queue_runtime || {};
 
     const limitRows = limitRules.map(r => `
       <tr>
@@ -82,12 +126,22 @@ Pages.qos = {
         <td>${escapeHtml(r.ip || '-')}</td>
         <td>${escapeHtml(qosMbps(r.download) || 'unlimited')} Mbps</td>
         <td>${escapeHtml(qosMbps(r.upload) || 'unlimited')} Mbps</td>
+        <td>${UI.badge(r.priority || 'normal', r.priority === 'high' ? 'green' : (r.priority === 'low' ? 'orange' : 'blue'))}</td>
+      </tr>
+    `).join('');
+
+    const globalRows = globalRules.map(r => `
+      <tr>
+        <td><strong>${escapeHtml(r.name || '-')}</strong></td>
+        <td>${escapeHtml(r.match || '-')}</td>
+        <td>${UI.badge(r.dscp || '-', String(r.dscp || '').includes('cs5') ? 'green' : 'orange')}</td>
+        <td>${escapeHtml(r.queue || '-')}</td>
       </tr>
     `).join('');
 
     return `
       <section class="grid grid-4" style="margin-bottom:18px">
-        ${UI.statCard({ icon: '⚡', color: data.enabled === 'true' ? 'green' : 'orange', label: 'QoS', value: data.enabled === 'true' ? 'Enabled' : 'Disabled', sub: 'CAKE + Profile Rules' })}
+        ${UI.statCard({ icon: '⚡', color: data.enabled === 'true' ? 'green' : 'orange', label: 'QoS', value: data.enabled === 'true' ? 'Enabled' : 'Disabled', sub: 'CAKE + Marking + Limiters' })}
         ${UI.statCard({ icon: '↑', color: 'blue', label: 'Upload', value: qosMbps(c.upload || '-') + ' Mbps', sub: c.wan || 'WAN' })}
         ${UI.statCard({ icon: '↓', color: 'purple', label: 'Download', value: qosMbps(c.download || '-') + ' Mbps', sub: c.ifb || 'IFB' })}
         ${UI.statCard({ icon: '✓', color: data.wan_exists ? 'green' : 'red', label: 'WAN', value: c.wan || '-', sub: data.wan_exists ? 'available' : 'missing' })}
@@ -108,7 +162,7 @@ Pages.qos = {
             </select>
           </div>
 
-          <div><label>Processing Strategy</label>
+          <div><label>Processing Strategy (reserved)</label>
             <select id="qos-strategy">
               <option value="balanced" ${c.strategy === 'balanced' ? 'selected' : ''}>Balanced</option>
               <option value="priority_first" ${c.strategy === 'priority_first' ? 'selected' : ''}>Priority First</option>
@@ -145,17 +199,29 @@ Pages.qos = {
         <button class="danger-button" onclick="QosActions.disable()">Disable QoS</button>
       `)}
 
+      ${UI.panel('CAKE Queue Runtime', `
+        <p class="muted">Flows are grouped by the active CAKE mode. This shows source → destination → queue classification.</p>
+        ${queueRuntime.enabled === false
+          ? '<div class="muted">Runtime monitor is disabled to reduce CPU usage.</div>'
+          : queueRuntimeHtml(queueRuntime)}
+      `, `
+        <button class="${c.runtime_monitor === 'true' ? 'danger-button' : 'primary-button'}" onclick="QosActions.toggleRuntime('${c.runtime_monitor === 'true' ? 'false' : 'true'}')">
+          ${c.runtime_monitor === 'true' ? 'Disable Runtime Monitor' : 'Enable Runtime Monitor'}
+        </button>
+      `)}
+
       ${UI.panel('Active Profile Limiters', `
         <table class="table">
-          <thead><tr><th>Profile</th><th>Client IP</th><th>Download</th><th>Upload</th></tr></thead>
-          <tbody>${limitRows || '<tr><td colspan="4">No limiter rules active.</td></tr>'}</tbody>
+          <thead><tr><th>Profile</th><th>Client IP</th><th>Download</th><th>Upload</th><th>Limiter Priority</th></tr></thead>
+          <tbody>${limitRows || '<tr><td colspan="5">No limiter rules active.</td></tr>'}</tbody>
         </table>
       `)}
 
-      ${UI.panel('Active Priority Marking', `
+      ${UI.panel('Active Application / Protocol Marking', `
+        <p class="muted">Device/profile-wide marking is disabled. Only global application/protocol marking is used here.</p>
         <table class="table">
-          <thead><tr><th>Profile</th><th>Client IP</th><th>DSCP</th></tr></thead>
-          <tbody>${priorityRows || '<tr><td colspan="3">No priority marking rules active.</td></tr>'}</tbody>
+          <thead><tr><th>Rule</th><th>Match</th><th>DSCP</th><th>Queue</th></tr></thead>
+          <tbody>${globalRows || '<tr><td colspan="4">No global marking rules active.</td></tr>'}</tbody>
         </table>
       `)}
 
@@ -212,6 +278,12 @@ window.QosActions = {
     UI.busy.hide();
 
     UI.toast(r.ok ? 'success' : 'error', r.ok ? 'QoS applied' : 'QoS failed', r.error || '');
+    await Ninjaku.navigate('qos');
+  },
+
+  async toggleRuntime(value) {
+    await NinjakuAPI.post('/qos', { runtime_monitor: value });
+    UI.toast('success', 'Runtime monitor updated', value === 'true' ? 'Runtime monitor enabled.' : 'Runtime monitor disabled.');
     await Ninjaku.navigate('qos');
   },
 
