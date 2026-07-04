@@ -179,45 +179,88 @@ def _clear_unlocked():
     set("qos.enabled", "false")
     return {"ok": True, "wan": wan, "ifb": ifb}
 
-def _apply_unlocked():
-    c = cfg()
+def qos_pipeline(strategy):
+    strategy = str(strategy or "balanced").lower()
+
+    if strategy == "priority_first":
+        return ["gateway", "marking", "cake", "limiter"]
+
+    if strategy == "limiter_first":
+        return ["gateway", "limiter", "marking", "cake"]
+
+    return ["gateway", "marking", "cake", "limiter"]
+
+def apply_gateway_stage():
+    try:
+        from lib.router_service import ensure_gateway
+        return ensure_gateway()
+    except Exception as e:
+        return {"ok": False, "error": str(e)}
+
+def apply_marking_stage():
+    return apply_dscp_marks()
+
+def apply_cake_stage(c):
     wan = c["wan"]
     ifb = c["ifb"]
-
-    if not iface_exists(wan):
-        return {"ok": False, "error": f"WAN interface {wan} not found"}
-
-    load_modules()
 
     run(["ip", "link", "set", ifb, "up"])
     run(["tc", "qdisc", "del", "dev", wan, "root"])
     run(["tc", "qdisc", "del", "dev", wan, "ingress"])
     run(["tc", "qdisc", "del", "dev", ifb, "root"])
 
-    dscp = apply_dscp_marks()
-
-    # Upload shaping: LAN -> WAN
     up = run(["tc", "qdisc", "replace", "dev", wan, "root"] + cake_args(c["upload"], "upload"))
 
-    # Download shaping: WAN ingress -> IFB egress
     run(["tc", "qdisc", "add", "dev", wan, "ingress"])
     redirect = run([
         "tc", "filter", "add", "dev", wan, "parent", "ffff:",
         "protocol", "all", "matchall",
         "action", "mirred", "egress", "redirect", "dev", ifb
     ])
+
     down = run(["tc", "qdisc", "replace", "dev", ifb, "root"] + cake_args(c["download"], "download"))
 
-    wifi_limits = apply_wifi_profile_limits()
+    return {
+        "ok": up.get("ok") and redirect.get("ok") and down.get("ok"),
+        "upload_result": up,
+        "redirect_result": redirect,
+        "download_result": down,
+    }
 
-    gateway = None
-    try:
-        from lib.router_service import ensure_gateway
-        gateway = ensure_gateway()
-    except Exception as e:
-        gateway = {"ok": False, "error": str(e)}
+def apply_limiter_stage():
+    return apply_wifi_profile_limits()
 
-    ok = up["ok"] and redirect["ok"] and down["ok"] and wifi_limits.get("ok", False) and gateway.get("ok", False)
+def _apply_unlocked():
+    c = cfg()
+    wan = c["wan"]
+    ifb = c["ifb"]
+    strategy = c.get("strategy", "balanced")
+    pipeline = qos_pipeline(strategy)
+
+    if not iface_exists(wan):
+        return {"ok": False, "error": f"WAN interface {wan} not found"}
+
+    load_modules()
+
+    results = {}
+    for stage in pipeline:
+        if stage == "gateway":
+            results["gateway"] = apply_gateway_stage()
+
+        elif stage == "marking":
+            results["dscp_result"] = apply_marking_stage()
+
+        elif stage == "cake":
+            cake = apply_cake_stage(c)
+            results["cake"] = cake
+            results["upload_result"] = cake.get("upload_result", {})
+            results["redirect_result"] = cake.get("redirect_result", {})
+            results["download_result"] = cake.get("download_result", {})
+
+        elif stage == "limiter":
+            results["wifi_profile_limits"] = apply_limiter_stage()
+
+    ok = all(v.get("ok", False) for v in results.values() if isinstance(v, dict))
     set("qos.enabled", "true" if ok else "false")
 
     return {
@@ -226,12 +269,15 @@ def _apply_unlocked():
         "ifb": ifb,
         "upload": c["upload"],
         "download": c["download"],
-        "upload_result": up,
-        "redirect_result": redirect,
-        "download_result": down,
-        "dscp_result": dscp,
-        "wifi_profile_limits": wifi_limits,
-        "gateway": gateway,
+        "strategy": strategy,
+        "pipeline": pipeline,
+        "upload_result": results.get("upload_result", {}),
+        "redirect_result": results.get("redirect_result", {}),
+        "download_result": results.get("download_result", {}),
+        "dscp_result": results.get("dscp_result", {}),
+        "wifi_profile_limits": results.get("wifi_profile_limits", {}),
+        "gateway": results.get("gateway", {}),
+        "stage_results": results,
     }
 
 def set_config(values):
@@ -254,9 +300,10 @@ def qos_runtime_state():
 
     return {
         "strategy_configured": c.get("strategy", "balanced"),
-        "strategy_effective": c.get("strategy", "balanced") if limiter_on else "inactive",
-        "strategy_active": limiter_on,
-        "strategy_note": "Strategy currently affects limiter tc filter priority mapping only. It does not change the top-level CAKE/marking apply pipeline.",
+        "strategy_effective": c.get("strategy", "balanced") if qos_on else "inactive",
+        "strategy_active": qos_on,
+        "strategy_pipeline": qos_pipeline(c.get("strategy", "balanced")) if qos_on else [],
+        "strategy_note": "Strategy changes the global QoS apply pipeline order.",
         "limiter_active": limiter_on,
         "limiter_rule_count": len(limits),
         "limiter_priority_active": limiter_on,
