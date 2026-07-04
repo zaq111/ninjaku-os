@@ -50,6 +50,7 @@ def ensure_table():
         cols = [r[1] for r in db.execute("PRAGMA table_info(policies)").fetchall()]
         extra_cols = {
             "qos_enabled": "INTEGER DEFAULT 0",
+            "qos_mode": "TEXT DEFAULT 'priority'",
             "qos_download": "TEXT DEFAULT ''",
             "qos_upload": "TEXT DEFAULT ''",
             "qos_priority": "TEXT DEFAULT 'normal'",

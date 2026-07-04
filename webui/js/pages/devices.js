@@ -6,15 +6,14 @@ function qosBadge(d) {
   }
 
   const mode = d.qos_mode || 'priority';
-  const queue = d.qos_queue_label || '-';
 
   if (mode === 'limiter') {
     const down = String(d.qos_download || '0').replace(/mbit|mbps/gi, '') || '0';
     const up = String(d.qos_upload || '0').replace(/mbit|mbps/gi, '') || '0';
-    return `${UI.badge('Limiter ' + down + '/' + up + ' Mbps', 'orange')}<br><small>${escapeHtml(queue)}</small>`;
+    return `${UI.badge('Limiter ' + down + '/' + up + ' Mbps', 'orange')}<br><small>${escapeHtml(d.qos_queue_label || 'Limiter scheduling')}</small>`;
   }
 
-  return `${UI.badge('Priority ' + (d.qos_priority || 'normal'), d.qos_priority === 'high' ? 'green' : 'blue')}<br><small>${escapeHtml(queue)}</small>`;
+  return `${UI.badge('CAKE Marking', 'blue')}<br><small>Global application/protocol rules</small>`;
 }
 
 function deviceIcon(d) {
@@ -44,17 +43,18 @@ Pages.devices = {
     DeviceActions.leases = leasesData.leases || [];
 
     const devices = DeviceActions.devices;
-    const online = devices.filter(d => d.status === 'online').length;
-    const offline = devices.filter(d => d.status === 'offline').length;
+    const online = data.online ?? devices.filter(d => d.status === 'online').length;
+    const offline = data.offline ?? devices.filter(d => d.status === 'offline').length;
 
     const rows = devices.map(d => `
       <tr>
         <td>${deviceIcon(d)} <strong>${escapeHtml(d.alias || d.hostname || 'Unknown')}</strong></td>
-        <td>${escapeHtml(d.ip)}</td>
-        <td>${escapeHtml(d.mac)}</td>
+        <td>${escapeHtml(d.ip || '')}</td>
+        <td>${escapeHtml(d.mac || '')}</td>
         <td>${UI.badge(d.profile || 'default', 'blue')}</td>
         <td>${UI.badge(d.status || 'unknown', statusColor(d.status))}</td>
-        <td>${qosBadge(d)}</td>
+        <td>${escapeHtml(d.last_seen_age || '-')}</td>
+        <td>${escapeHtml(d.qos_label || d.policy_bandwidth || '')}<br><small>${escapeHtml(d.qos_queue_label || '')}</small></td>
         <td>
           <button class="soft-button" onclick="DeviceActions.edit('${escapeHtml(d.mac)}')">Edit</button>
         </td>
@@ -71,8 +71,8 @@ Pages.devices = {
 
       ${UI.panel('Recent Devices', `
         <table class="table">
-          <thead><tr><th>Device</th><th>IP Address</th><th>MAC</th><th>Profile</th><th>Status</th><th>QoS</th><th>Action</th></tr></thead>
-          <tbody>${rows || '<tr><td colspan="7">No devices found.</td></tr>'}</tbody>
+          <thead><tr><th>Device</th><th>IP Address</th><th>MAC</th><th>Profile</th><th>Status</th><th>Last Seen</th><th>QoS</th><th>Action</th></tr></thead>
+          <tbody>${rows || '<tr><td colspan="8">No devices found.</td></tr>'}</tbody>
         </table>
       `, `<button class="primary-button" onclick="DeviceActions.sync()">Sync</button>`)}
     `;
@@ -137,7 +137,7 @@ window.DeviceActions = {
               <div><span>Profile</span><strong>${escapeHtml(d.profile || 'default')}</strong></div>
               <div><span>Internet</span><strong>${escapeHtml(d.policy_internet || '-')}</strong></div>
               <div><span>QoS</span><strong>${escapeHtml(d.qos_label || 'QoS off')}</strong></div>
-              <div><span>Queue</span><strong>${escapeHtml(d.qos_queue_label || '-')}</strong></div>
+              <div><span>QoS Detail</span><strong>${escapeHtml(d.qos_queue_label || '-')}</strong></div>
             </div>
 
             <div class="device-dns-panel">

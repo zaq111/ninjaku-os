@@ -9,9 +9,34 @@ ENDPOINTS = [
     ("POST", "/api/v1/settings"),
 ]
 
+SECRET_KEYS = {
+    "adguard.password",
+    "adguard.username",
+    "telegram.token",
+    "telegram.chat_id",
+    "openai.api_key",
+    "cloudflare.api_token",
+}
+
+def mask_setting(key, value):
+    if key in SECRET_KEYS:
+        if value in (None, ""):
+            return ""
+        return "********"
+    return value
+
+
 @settings_bp.get("/api/v1/settings")
 def api_settings():
-    return ok({"settings": [{"key": k, "value": v} for k, v in list_all()]})
+    return ok({
+        "settings": [
+            {
+                "key": k,
+                "value": mask_setting(k, v)
+            }
+            for k, v in list_all()
+        ]
+    })
 
 @settings_bp.post("/api/v1/settings")
 def api_settings_set():

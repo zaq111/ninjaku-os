@@ -52,6 +52,30 @@ def status():
         "ip_forward": run(["cat", "/proc/sys/net/ipv4/ip_forward"])["stdout"],
     }
 
+def active_client_side():
+    lan = cfg("router.lan")
+    if interface_exists(lan):
+        return {"ok": True, "interface": lan, "type": "lan", "ip": cfg("router.lan_ip")}
+
+    try:
+        from lib.wifi_service import get_config
+        wifi = get_config()
+        wif = wifi.get("interface", "wlan0")
+        if interface_exists(wif):
+            return {"ok": True, "interface": wif, "type": "wifi", "ip": wifi.get("ip", "192.168.50.1/24")}
+    except Exception:
+        pass
+
+    return {"ok": False, "interface": "", "type": "", "ip": ""}
+
+def client_side_ready():
+    active = active_client_side()
+    return {
+        "ok": active.get("ok", False),
+        "interfaces": [active] if active.get("ok") else [],
+    }
+
+
 def lan_up():
     c = current()
     lan = c["lan"]
@@ -132,11 +156,19 @@ def _enable_router_unlocked():
     results["lan_up"] = lan_up()
 
     if not results["lan_up"].get("ok"):
-        set("router.enabled", "true")
-        set("router.state", results["lan_up"].get("state", "waiting_for_lan"))
-        set("dhcp.enabled", "false")
-        set("firewall.enabled", "false")
-        return {"ok": False, "state": get("router.state", "waiting_for_lan"), "results": results}
+        results["client_side_ready"] = client_side_ready()
+
+        if not results["client_side_ready"].get("ok"):
+            set("router.enabled", "true")
+            set("router.state", results["lan_up"].get("state", "waiting_for_lan"))
+            set("dhcp.enabled", "false")
+            set("firewall.enabled", "false")
+            return {"ok": False, "state": get("router.state", "waiting_for_lan"), "results": results}
+
+        # LAN eth may be absent, but WiFi/AP side is available.
+        results["lan_up"]["ok"] = True
+        results["lan_up"]["warning"] = "LAN interface missing, continuing with available client-side interface"
+        set("router.state", "running_wifi_only")
 
     results["gateway"] = ensure_gateway()
 
@@ -148,7 +180,7 @@ def _enable_router_unlocked():
 
     try:
         from lib import qos_service
-        results["qos_apply"] = qos_service.apply()
+        results["qos_apply"] = qos_service._apply_unlocked()
     except Exception as e:
         results["qos_apply"] = {"ok": False, "error": str(e)}
 
@@ -214,21 +246,12 @@ def ensure_gateway():
 
     subnets = []
 
-    lan_ip = cfg("router.lan_ip")
-    if lan_ip:
+    active = active_client_side()
+    if active.get("ok") and active.get("ip"):
         try:
-            subnets.append(str(ipaddress.ip_interface(lan_ip).network))
+            subnets.append(str(ipaddress.ip_interface(active["ip"]).network))
         except Exception:
             pass
-
-    try:
-        from lib.wifi_service import get_config
-        wifi = get_config()
-        wifi_ip = wifi.get("ip")
-        if wifi_ip:
-            subnets.append(str(ipaddress.ip_interface(wifi_ip).network))
-    except Exception:
-        pass
 
     subnets = sorted(builtins.set(subnets))
 

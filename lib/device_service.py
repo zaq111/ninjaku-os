@@ -199,6 +199,51 @@ def qos_label(policy):
     }
 
 
+def effective_device_status(last_seen, stored_status):
+    from datetime import datetime, timezone
+
+    if not last_seen:
+        return "unknown"
+
+    try:
+        dt = datetime.fromisoformat(str(last_seen).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        age = (datetime.now(timezone.utc) - dt).total_seconds()
+    except Exception:
+        return stored_status or "unknown"
+
+    if age <= 90:
+        return "online"
+    if age <= 300:
+        return "idle"
+    if age <= 1800:
+        return "away"
+    return "offline"
+
+def last_seen_age_label(last_seen):
+    from datetime import datetime, timezone
+
+    if not last_seen:
+        return "-"
+
+    try:
+        dt = datetime.fromisoformat(str(last_seen).replace("Z", "+00:00"))
+        if dt.tzinfo is None:
+            dt = dt.replace(tzinfo=timezone.utc)
+        sec = int((datetime.now(timezone.utc) - dt).total_seconds())
+    except Exception:
+        return str(last_seen)
+
+    if sec < 60:
+        return f"{sec}s ago"
+    if sec < 3600:
+        return f"{sec // 60}m ago"
+    if sec < 86400:
+        return f"{sec // 3600}h ago"
+    return f"{sec // 86400}d ago"
+
+
 def list_devices():
     ensure_schema()
     with connect() as db:
@@ -232,16 +277,36 @@ def list_devices():
             "qos_label": q.get("qos_label"),
             "qos_queue_label": q.get("qos_queue_label"),
             "last_seen": r[6],
+            "last_seen_age": last_seen_age_label(r[6]),
             "seen_count": r[7],
-            "status": r[8],
+            "status": effective_device_status(r[6], r[8]),
         })
+
+    rank = {"online": 0, "idle": 1, "away": 2, "unknown": 3, "offline": 4}
+    devices.sort(key=lambda d: (
+        rank.get(d.get("status"), 9),
+        (d.get("alias") or d.get("hostname") or d.get("ip") or "").lower()
+    ))
     return devices
 
 def status():
     # Read-only. Do not sync/discover here.
     # Overview and Devices pages must not block on DB writes or neighbor discovery.
     devices = list_devices()
-    return {"count": len(devices), "devices": devices}
+    counts = {}
+    for d in devices:
+        st = d.get("status", "unknown")
+        counts[st] = counts.get(st, 0) + 1
+
+    return {
+        "count": len(devices),
+        "online": counts.get("online", 0),
+        "idle": counts.get("idle", 0),
+        "away": counts.get("away", 0),
+        "offline": counts.get("offline", 0),
+        "unknown": counts.get("unknown", 0),
+        "devices": devices,
+    }
 
 def update_device(mac, field, value):
     allowed = {"alias", "notes", "profile"}
