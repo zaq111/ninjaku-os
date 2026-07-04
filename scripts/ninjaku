@@ -518,6 +518,27 @@ def cmd_audit():
         id_, ts, actor, action, detail = row
         print(f"{id_:>4}  {ts}  {actor:<8}  {action:<16}  {detail}")
 
+def cmd_module_passthrough(module, args=None):
+    args = args or []
+    command = args[0] if args else "status"
+    kwargs = {}
+
+    # simple key=value support
+    for item in args[1:]:
+        if "=" in item:
+            k, v = item.split("=", 1)
+            kwargs[k] = v
+
+    try:
+        r = execute(module, command, **kwargs)
+        print_header()
+        print(json.dumps(r, indent=2))
+    except Exception as e:
+        print_header()
+        print(f"{module} {command}: FAILED")
+        print(str(e))
+        sys.exit(1)
+
 def cmd_help():
     print_header()
     print("Usage:")
@@ -536,6 +557,12 @@ def cmd_help():
     print("  ninjaku dns-filter [add|delete|import|apply]")
     print("  ninjaku profiles [add|delete]")
     print("  ninjaku policy [set|resolve|apply]")
+    print("  ninjaku qos [status|apply|clear]")
+    print("  ninjaku wifi [status|start|stop|restart|stations]")
+    print("  ninjaku adguard [status]")
+    print("  ninjaku packages [status|install|remove] package=<name>")
+    print("  ninjaku tailscale [status]")
+    print("  ninjaku wireguard [status]")
     print("  ninjaku api")
     print("  ninjaku help")
 
@@ -602,6 +629,10 @@ def main():
 
     if args[0] == "policy":
         cmd_policy(args[1:])
+        return
+
+    if args[0] in ("qos", "wifi", "adguard", "packages", "tailscale", "wireguard"):
+        cmd_module_passthrough(args[0], args[1:])
         return
 
     if args[0] == "api":
