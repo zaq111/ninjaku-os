@@ -65,9 +65,21 @@ def parse_leases():
 
     return devices
 
+def client_interfaces():
+    try:
+        from lib.router_service import active_client_side
+        active = active_client_side()
+        if active.get("ok") and active.get("interface"):
+            return {active["interface"]}
+    except Exception:
+        pass
+
+    return {get("router.lan", "eth1")}
+
+
 def parse_neighbors():
     devices = []
-    lan_if = get("router.lan", "eth1")
+    allowed_ifs = client_interfaces()
     out = run(["ip", "neigh"])["stdout"]
 
     for line in out.splitlines():
@@ -89,7 +101,7 @@ def parse_neighbors():
         if not mac:
             continue
 
-        if dev != lan_if:
+        if dev not in allowed_ifs:
             continue
 
         devices.append({
@@ -155,28 +167,35 @@ def qos_label(policy):
     mode = policy.get("qos_mode", "priority") or "priority"
     prio = policy.get("qos_priority", "normal") or "normal"
 
-    if prio == "high":
-        queue = "High / Voice"
-    elif prio == "low":
-        queue = "Low / Bulk"
-    else:
-        queue = "Normal / Best Effort"
-
     if mode == "limiter":
         down = str(policy.get("qos_download") or "0").replace("mbit", "")
         up = str(policy.get("qos_upload") or "0").replace("mbit", "")
-        label = f"Limiter {down}/{up} Mbps"
-    else:
-        label = f"Priority {prio}"
+
+        if prio == "high":
+            queue = "High limiter priority"
+        elif prio == "low":
+            queue = "Low limiter priority"
+        else:
+            queue = "Normal limiter priority"
+
+        return {
+            "qos_enabled": True,
+            "qos_mode": mode,
+            "qos_priority": prio,
+            "qos_download": policy.get("qos_download", ""),
+            "qos_upload": policy.get("qos_upload", ""),
+            "qos_label": f"Limiter {down}/{up} Mbps",
+            "qos_queue_label": queue,
+        }
 
     return {
         "qos_enabled": True,
         "qos_mode": mode,
-        "qos_priority": prio,
-        "qos_download": policy.get("qos_download", ""),
-        "qos_upload": policy.get("qos_upload", ""),
-        "qos_label": label,
-        "qos_queue_label": queue,
+        "qos_priority": "",
+        "qos_download": "",
+        "qos_upload": "",
+        "qos_label": "CAKE / Marking",
+        "qos_queue_label": "Global application/protocol marking",
     }
 
 
@@ -219,7 +238,8 @@ def list_devices():
     return devices
 
 def status():
-    sync()
+    # Read-only. Do not sync/discover here.
+    # Overview and Devices pages must not block on DB writes or neighbor discovery.
     devices = list_devices()
     return {"count": len(devices), "devices": devices}
 
