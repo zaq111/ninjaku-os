@@ -151,7 +151,7 @@ window.PolicyActions = {
                 <label>Upload Limit (Mbps)</label>
                 <input id="policy-qos-upload" value="${escapeHtml(p.qos_upload || '')}" placeholder="2">
 
-                <label>Limiter Priority (display only)</label>
+                <label>Limiter Priority</label>
                 <select id="policy-qos-priority">
                   <option value="low" ${p.qos_priority === 'low' ? 'selected' : ''}>low</option>
                   <option value="normal" ${p.qos_priority === 'normal' ? 'selected' : ''}>normal</option>
@@ -198,7 +198,7 @@ window.PolicyActions = {
       if (downEl) downEl.disabled = false;
       if (upEl) upEl.disabled = false;
       if (prioEl) prioEl.disabled = false;
-      if (helpEl) helpEl.textContent = 'Limiter mode: enforces maximum bandwidth. Priority is currently displayed only; limiter priority scheduling is not active yet.';
+      if (helpEl) helpEl.textContent = 'Limiter mode: enforces maximum bandwidth. Priority affects tc limiter scheduling: high gets lower filter priority number, low gets lower scheduling preference.';
     } else {
       if (limiterBox) limiterBox.style.display = 'none';
       if (downEl) downEl.disabled = true;

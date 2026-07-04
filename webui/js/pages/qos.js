@@ -116,6 +116,7 @@ Pages.qos = {
   async render() {
     const data = await NinjakuAPI.get('/qos');
     const c = data.config || {};
+    const runtime = data.runtime || {};
     const limitRules = data.profile_limit_rules || [];
     const globalRules = data.global_marking_rules || [];
     const queueRuntime = data.queue_runtime || {};
@@ -162,7 +163,7 @@ Pages.qos = {
             </select>
           </div>
 
-          <div><label>Processing Strategy (reserved)</label>
+          <div><label>Processing Processing Strategy</label>
             <select id="qos-strategy">
               <option value="balanced" ${c.strategy === 'balanced' ? 'selected' : ''}>Balanced</option>
               <option value="priority_first" ${c.strategy === 'priority_first' ? 'selected' : ''}>Priority First</option>
@@ -197,6 +198,19 @@ Pages.qos = {
       `, `
         <button class="primary-button" onclick="QosActions.saveApply()">Save & Apply</button>
         <button class="danger-button" onclick="QosActions.disable()">Disable QoS</button>
+      `)}
+
+      ${UI.panel('QoS Runtime Truth', `
+        <div class="device-detail-grid">
+          <div><span>Strategy Configured</span><strong>${escapeHtml(runtime.strategy_configured || c.strategy || '-')}</strong></div>
+          <div><span>Strategy Effective</span><strong>${escapeHtml(runtime.strategy_effective || 'balanced')}</strong></div>
+          <div><span>Strategy Active</span><strong>${runtime.strategy_active ? 'Yes' : 'No'}</strong></div>
+          <div><span>Limiter Priority Active</span><strong>${runtime.limiter_priority_active ? 'Yes' : 'No'}</strong></div>
+          <div><span>Limiter Rules</span><strong>${runtime.limiter_rule_count ?? 0}</strong></div>
+          <div><span>DiffServ</span><strong>${escapeHtml(runtime.diffserv_active || c.diffserv || '-')}</strong></div>
+        </div>
+        <p class="muted">${escapeHtml(runtime.strategy_note || '')}</p>
+        <p class="muted">${escapeHtml(runtime.limiter_priority_note || '')}</p>
       `)}
 
       ${UI.panel('CAKE Queue Runtime', `

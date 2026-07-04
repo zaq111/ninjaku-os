@@ -252,9 +252,9 @@ def qos_runtime_state():
 
     return {
         "strategy_configured": c.get("strategy", "balanced"),
-        "strategy_effective": "balanced",
-        "strategy_active": False,
-        "strategy_note": "Processing strategy is reserved. Runtime currently uses balanced pipeline.",
+        "strategy_effective": c.get("strategy", "balanced"),
+        "strategy_active": True,
+        "strategy_note": "Processing strategy changes tc limiter filter priority mapping.",
         "limiter_active": len(limits) > 0,
         "limiter_rule_count": len(limits),
         "limiter_priority_active": True,
@@ -347,12 +347,28 @@ def limiter_priority_rank(priority):
     return 50
 
 def limiter_filter_prio(priority):
+    strategy = cfg().get("strategy", "balanced")
     p = str(priority or "normal").lower()
-    if p == "high":
-        return 1
-    if p == "low":
-        return 9
-    return 5
+
+    maps = {
+        "balanced": {
+            "high": 3,
+            "normal": 5,
+            "low": 7,
+        },
+        "priority_first": {
+            "high": 1,
+            "normal": 5,
+            "low": 9,
+        },
+        "limiter_first": {
+            "high": 2,
+            "normal": 3,
+            "low": 4,
+        },
+    }
+
+    return maps.get(strategy, maps["balanced"]).get(p, maps.get(strategy, maps["balanced"])["normal"])
 
 
 def limiter_interfaces():
