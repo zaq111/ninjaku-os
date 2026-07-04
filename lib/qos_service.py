@@ -90,14 +90,23 @@ def cake_args(rate, direction):
 
 def profile_dscp_rules():
     """
-    Q1: Disable device-wide DSCP marking.
+    Legacy compatibility only.
 
-    Do NOT mark all packets from a device/profile as CS5/CS1.
-    That breaks CAKE diffserv behavior because download, YouTube,
-    game, DNS, etc. from the same device would all enter one queue.
+    Device/profile-wide DSCP marking is intentionally disabled.
 
-    Profile priority will be used only by limiter logic later.
-    Application/protocol marking stays in apply_dscp_marks().
+    Do not re-enable rules here.
+
+    Reason:
+    Marking every packet from one device/profile as CS5/CS1 breaks
+    CAKE diffserv behavior. Download, video, game, DNS, and browsing
+    from the same device would all be forced into one queue.
+
+    Current design:
+    - Application/protocol marking lives in global_marking_rules()
+      and apply_dscp_marks().
+    - Profile priority is used only by limiter logic.
+    - This function stays only so older API/UI code that expects
+      "profile_rules" continues to receive an empty list safely.
     """
     return []
 
