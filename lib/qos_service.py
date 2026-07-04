@@ -246,6 +246,24 @@ def set_config(values):
 
     return {"ok": True, "changed": changed, "config": cfg()}
 
+def qos_runtime_state():
+    c = cfg()
+    limits = profile_limit_rules()
+
+    return {
+        "strategy_configured": c.get("strategy", "balanced"),
+        "strategy_effective": "balanced",
+        "strategy_active": False,
+        "strategy_note": "Processing strategy is reserved. Runtime currently uses balanced pipeline.",
+        "limiter_active": len(limits) > 0,
+        "limiter_rule_count": len(limits),
+        "limiter_priority_active": True,
+        "limiter_priority_note": "Limiter priority maps to tc filter priority and class buckets: high=1, normal=5, low=9.",
+        "marking_active": True,
+        "diffserv_active": c.get("diffserv", "diffserv4"),
+    }
+
+
 def status():
     c = cfg()
     wan = c["wan"]
@@ -253,6 +271,7 @@ def status():
 
     return {
         "config": c,
+        "runtime": qos_runtime_state(),
         "enabled": get("qos.enabled", "false"),
         "wan_exists": iface_exists(wan),
         "wan_qdisc": run(["tc", "-s", "qdisc", "show", "dev", wan])["stdout"],
@@ -260,8 +279,8 @@ def status():
         "profile_rules": profile_dscp_rules(),
         "global_marking_rules": global_marking_rules(),
         "profile_limit_rules": profile_limit_rules(),
-        "wifi_limit_qdisc": run(["tc", "-s", "qdisc", "show", "dev", "wlan0"])["stdout"] if iface_exists("wlan0") else "",
-        "wifi_ifb_qdisc": run(["tc", "-s", "qdisc", "show", "dev", "ifb-wlan0"])["stdout"] if iface_exists("ifb-wlan0") else "",
+        "wifi_limit_qdisc": run(["tc", "-s", "qdisc", "show", "dev", limiter_interfaces()[0]])["stdout"] if iface_exists(limiter_interfaces()[0]) else "",
+        "wifi_ifb_qdisc": run(["tc", "-s", "qdisc", "show", "dev", limiter_interfaces()[1]])["stdout"] if iface_exists(limiter_interfaces()[1]) else "",
         "queue_runtime": qos_queue_runtime() if boolv(c.get("runtime_monitor", "false")) else {
             "enabled": False,
             "mode": c.get("diffserv", "diffserv4"),
@@ -319,9 +338,38 @@ def profile_limit_rules():
 
     return rules
 
+def limiter_priority_rank(priority):
+    p = str(priority or "normal").lower()
+    if p == "high":
+        return 10
+    if p == "low":
+        return 90
+    return 50
+
+def limiter_filter_prio(priority):
+    p = str(priority or "normal").lower()
+    if p == "high":
+        return 1
+    if p == "low":
+        return 9
+    return 5
+
+
+def limiter_interfaces():
+    try:
+        from lib.router_service import active_client_side
+        active = active_client_side()
+        if active.get("ok") and active.get("interface"):
+            iface = active["interface"]
+            return iface, f"ifb-{iface}"
+    except Exception:
+        pass
+
+    return "wlan0", "ifb-wlan0"
+
+
 def clear_wifi_profile_limits():
-    wlan = "wlan0"
-    ifb = "ifb-wlan0"
+    wlan, ifb = limiter_interfaces()
 
     run(["tc", "qdisc", "del", "dev", wlan, "root"])
     run(["tc", "qdisc", "del", "dev", wlan, "ingress"])
@@ -331,14 +379,16 @@ def clear_wifi_profile_limits():
     return {"ok": True}
 
 def apply_wifi_profile_limits():
-    wlan = "wlan0"
-    ifb = "ifb-wlan0"
-    rules = profile_limit_rules()
+    wlan, ifb = limiter_interfaces()
+    rules = sorted(
+        profile_limit_rules(),
+        key=lambda r: (limiter_priority_rank(r.get("priority")), r.get("ip", ""))
+    )
 
     clear_wifi_profile_limits()
 
     if not iface_exists(wlan):
-        return {"ok": True, "skipped": True, "reason": "wlan0 not found", "rules": rules}
+        return {"ok": True, "skipped": True, "reason": f"{wlan} not found", "rules": rules, "wlan": wlan, "ifb": ifb}
 
     if not rules:
         return {"ok": True, "rules": []}
@@ -367,11 +417,18 @@ def apply_wifi_profile_limits():
         ["tc", "qdisc", "replace", "dev", ifb, "parent", "2:999", "fq_codel"],
     ]
 
-    idx = 10
+    counters = {"high": 0, "normal": 0, "low": 0}
     applied = []
 
     for r in rules:
         ip = r["ip"]
+        priority = str(r.get("priority") or "normal").lower()
+        if priority not in counters:
+            priority = "normal"
+
+        counters[priority] += 1
+        idx = limiter_priority_rank(priority) + counters[priority]
+        prio = limiter_filter_prio(priority)
 
         if r["download"]:
             classid = f"1:{idx}"
@@ -379,7 +436,7 @@ def apply_wifi_profile_limits():
                 ["tc", "class", "replace", "dev", wlan, "parent", "1:", "classid", classid,
                  "htb", "rate", r["download"], "ceil", r["download"]],
                 ["tc", "qdisc", "replace", "dev", wlan, "parent", classid, "fq_codel"],
-                ["tc", "filter", "replace", "dev", wlan, "protocol", "ip", "parent", "1:", "prio", str(idx),
+                ["tc", "filter", "replace", "dev", wlan, "protocol", "ip", "parent", "1:", "prio", str(prio),
                  "u32", "match", "ip", "dst", f"{ip}/32", "flowid", classid],
             ]
 
@@ -389,12 +446,16 @@ def apply_wifi_profile_limits():
                 ["tc", "class", "replace", "dev", ifb, "parent", "2:", "classid", classid,
                  "htb", "rate", r["upload"], "ceil", r["upload"]],
                 ["tc", "qdisc", "replace", "dev", ifb, "parent", classid, "fq_codel"],
-                ["tc", "filter", "replace", "dev", ifb, "protocol", "ip", "parent", "2:", "prio", str(idx),
+                ["tc", "filter", "replace", "dev", ifb, "protocol", "ip", "parent", "2:", "prio", str(prio),
                  "u32", "match", "ip", "src", f"{ip}/32", "flowid", classid],
             ]
 
-        applied.append(r)
-        idx += 1
+        applied.append({
+            **r,
+            "tc_class_bucket": priority,
+            "tc_filter_prio": prio,
+            "tc_index": idx,
+        })
 
     for cmd in cmds:
         res = run(cmd)
