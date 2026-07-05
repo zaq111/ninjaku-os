@@ -117,17 +117,20 @@ def set_policy(profile, field, value):
     if field not in allowed:
         return {"ok": False, "error": "field not allowed"}
 
-    if field == "qos_enabled":
-        value = 1 if str(value).lower() in ("1", "true", "yes", "on") else 0
+    # Keep policies and profiles in sync; runtime QoS reads from profiles.
+    result = update_policy(profile, {field: value})
+    if not result.get("ok"):
+        return result
 
-    with connect() as db:
-        db.execute("INSERT OR IGNORE INTO policies(profile) VALUES(?)", (profile,))
-        db.execute(
-            f"UPDATE policies SET {field}=?, updated_at=CURRENT_TIMESTAMP WHERE profile=?",
-            (value, profile)
-        )
-
-    return {"ok": True, "profile": profile, "field": field, "value": value}
+    changed = result.get("changed", {})
+    return {
+        "ok": True,
+        "profile": result.get("profile", profile),
+        "field": field,
+        "value": changed.get(field, value),
+        "changed": changed,
+        "policy": result.get("policy"),
+    }
 
 def _apply_policy_unlocked():
     firewall = module_execute("firewall", "apply-policy")

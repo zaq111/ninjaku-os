@@ -179,7 +179,7 @@ def cmd_policy(args=None):
     if args and args[0] == "set":
         if len(args) < 4:
             print("Usage: ninjaku policy set <profile> <field> <value>")
-            print("Fields: internet, bandwidth, dns_filter, schedule, priority")
+            print("Fields: internet, bandwidth, dns_filter, schedule, priority, qos_enabled, qos_download, qos_upload, qos_priority, qos_mode")
             return
 
         r = execute("policy", "set", profile=args[1], field=args[2], value=" ".join(args[3:]))
