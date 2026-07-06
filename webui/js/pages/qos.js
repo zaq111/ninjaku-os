@@ -286,13 +286,30 @@ window.QosActions = {
   },
 
   async saveApply() {
-    UI.busy.show('Applying QoS...', 'Updating CAKE, DSCP marking and profile limiters.');
-    await NinjakuAPI.post('/qos', this.readForm());
-    const r = await NinjakuAPI.post('/qos/apply');
-    UI.busy.hide();
+    try {
+      if (UI.busy && UI.busy.show) {
+        UI.busy.show('Applying QoS...', 'Updating CAKE, DSCP marking and profile limiters.');
+      }
 
-    UI.toast(r.ok ? 'success' : 'error', r.ok ? 'QoS applied' : 'QoS failed', r.error || '');
-    await Ninjaku.navigate('qos');
+      const form = this.readForm();
+      console.log('QoS save form', form);
+
+      const saved = await NinjakuAPI.post('/qos', form);
+      if (saved.ok === false) {
+        throw new Error(saved.error || JSON.stringify(saved.errors || {}) || 'QoS config validation failed');
+      }
+
+      const r = await NinjakuAPI.post('/qos/apply');
+
+      if (UI.busy && UI.busy.hide) UI.busy.hide();
+
+      UI.toast(r.ok ? 'success' : 'error', r.ok ? 'QoS applied' : 'QoS failed', r.error || '');
+      await Ninjaku.navigate('qos');
+    } catch (err) {
+      if (UI.busy && UI.busy.hide) UI.busy.hide();
+      console.error('QoS saveApply failed', err);
+      UI.toast('error', 'QoS save failed', err.message || String(err));
+    }
   },
 
   async toggleRuntime(value) {
