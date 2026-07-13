@@ -1,5 +1,5 @@
 from lib.system import run
-from lib.settings import get, set
+from lib.settings import get, set, get_many
 
 DEFAULTS = {
     "qos.enabled": "false",
@@ -28,8 +28,12 @@ def ensure_defaults():
             set(k, v)
 
 def cfg():
-    ensure_defaults()
-    return {k.replace("qos.", ""): get(k, v) for k, v in DEFAULTS.items()}
+    # Read all QoS settings using one SQLite connection.
+    values = get_many(DEFAULTS.keys())
+    return {
+        key.replace("qos.", ""): values.get(key, default)
+        for key, default in DEFAULTS.items()
+    }
 
 def boolv(v):
     return str(v).lower() in ("1", "true", "yes", "on")
@@ -334,10 +338,10 @@ def set_config(values):
 
     return {"ok": True, "changed": changed, "config": cfg()}
 
-def qos_runtime_state():
-    c = cfg()
+def qos_runtime_state(c=None):
+    c = c or cfg()
     limits = profile_limit_rules()
-    qos_on = get("qos.enabled", "false") == "true"
+    qos_on = str(c.get("enabled", "false")).lower() == "true"
     limiter_on = qos_on and len(limits) > 0
 
     return {
@@ -362,8 +366,8 @@ def status():
 
     return {
         "config": c,
-        "runtime": qos_runtime_state(),
-        "enabled": get("qos.enabled", "false"),
+        "runtime": qos_runtime_state(c),
+        "enabled": c.get("enabled", "false"),
         "wan_exists": iface_exists(wan),
         "wan_qdisc": run(["tc", "-s", "qdisc", "show", "dev", wan])["stdout"],
         "ifb_qdisc": run(["tc", "-s", "qdisc", "show", "dev", ifb])["stdout"] if iface_exists(ifb) else "",

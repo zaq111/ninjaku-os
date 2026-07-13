@@ -1,4 +1,5 @@
 from flask import Blueprint, request
+import traceback
 from lib.modules import execute
 from api.common import ok, fail
 
@@ -16,6 +17,7 @@ def api_qos():
     try:
         return ok(execute("qos", "status"))
     except Exception as e:
+        traceback.print_exc()
         return fail(e)
 
 @qos_bp.post("/api/v1/qos")

@@ -14,6 +14,21 @@ def set(key, value):
             (key, str(value))
         )
 
+def get_many(keys):
+    keys = list(keys)
+    if not keys:
+        return {}
+
+    placeholders = ",".join("?" for _ in keys)
+
+    with connect() as db:
+        cur = db.execute(
+            f"SELECT key, value FROM settings WHERE key IN ({placeholders})",
+            keys,
+        )
+        return {key: value for key, value in cur.fetchall()}
+
+
 def get_bool(key, default=False):
     value = get(key, None)
     if value is None:

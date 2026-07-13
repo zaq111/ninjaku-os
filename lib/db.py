@@ -35,13 +35,17 @@ def connect():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     db = sqlite3.connect(DB_PATH, timeout=30)
-    db.execute("PRAGMA journal_mode=WAL")
     db.execute("PRAGMA busy_timeout=30000")
     db.execute("PRAGMA foreign_keys=ON")
     return db
 
 def init_db():
-    with connect() as db:
+    DB_PATH.parent.mkdir(parents=True, exist_ok=True)
+
+    with sqlite3.connect(DB_PATH, timeout=30) as db:
+        db.execute("PRAGMA busy_timeout=30000")
+        db.execute("PRAGMA journal_mode=WAL")
+        db.execute("PRAGMA foreign_keys=ON")
         db.executescript(SCHEMA)
         db.execute(
             "INSERT OR IGNORE INTO settings(key,value) VALUES(?,?)",
