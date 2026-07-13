@@ -79,13 +79,35 @@ def ap_capable():
     return "* AP" in out or "\n\t\t * AP" in out
 
 def get_config():
-    ensure_table()
-    with connect() as db:
-        r = db.execute("""
-            SELECT id, enabled, interface, ssid, password, country, channel,
-                   hw_mode, bridge, ip, created_at, updated_at
-            FROM wifi WHERE id='main'
-        """).fetchone()
+    # Read-only path. Schema/default creation belongs to write/init paths.
+    try:
+        with connect() as db:
+            r = db.execute("""
+                SELECT id, enabled, interface, ssid, password, country, channel,
+                       hw_mode, bridge, ip, created_at, updated_at
+                FROM wifi WHERE id='main'
+            """).fetchone()
+    except Exception as e:
+        # Missing table is equivalent to not-yet-initialized WiFi config.
+        if "no such table" not in str(e).lower():
+            raise
+        r = None
+
+    if not r:
+        return {
+            "id": DEFAULT_WIFI["id"],
+            "enabled": bool(DEFAULT_WIFI["enabled"]),
+            "interface": DEFAULT_WIFI["interface"],
+            "ssid": DEFAULT_WIFI["ssid"],
+            "password_set": bool(DEFAULT_WIFI["password"]),
+            "country": DEFAULT_WIFI["country"],
+            "channel": DEFAULT_WIFI["channel"],
+            "hw_mode": DEFAULT_WIFI["hw_mode"],
+            "bridge": DEFAULT_WIFI["bridge"],
+            "ip": DEFAULT_WIFI["ip"],
+            "created_at": None,
+            "updated_at": None,
+        }
 
     return {
         "id": r[0],
@@ -199,8 +221,8 @@ def write_hostapd_config():
         "bytes": len(generated["config"]),
     }
 
-def runtime():
-    cfg = get_config()
+def runtime(cfg=None):
+    cfg = cfg or get_config()
     iface = cfg["interface"]
 
     return {
@@ -210,11 +232,13 @@ def runtime():
     }
 
 def status():
+    cfg = get_config()
+
     return {
-        "config": get_config(),
+        "config": cfg,
         "radios": detect_radios(),
         "ap_capable": ap_capable(),
-        "runtime": runtime(),
+        "runtime": runtime(cfg),
     }
 
 def apply_ip():
