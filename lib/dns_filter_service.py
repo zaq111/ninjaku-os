@@ -29,7 +29,7 @@ def ensure_table():
             """, (d,))
 
 def list_domains():
-    ensure_table()
+    # Read-only path.
     with connect() as db:
         rows = db.execute("""
             SELECT domain, list_name, enabled, created_at
@@ -62,14 +62,17 @@ def delete_domain(domain):
     apply()
     return {"ok": cur.rowcount > 0, "domain": domain, "deleted": cur.rowcount}
 
-def build_config():
+def build_config(domains=None):
+    if domains is None:
+        domains = list_domains()
+
     lines = [
         "# Ninjaku OS Router DNS Filter",
         "# Generated automatically. Do not edit manually.",
         "",
     ]
 
-    for d in list_domains():
+    for d in domains:
         if d["enabled"]:
             lines.append(f"address=/{d['domain']}/0.0.0.0")
 
@@ -189,6 +192,6 @@ def status():
     return {
         "enabled_domains": len([d for d in domains if d["enabled"]]),
         "domains": domains,
-        "config": build_config(),
+        "config": build_config(domains),
         "conf": CONF,
     }

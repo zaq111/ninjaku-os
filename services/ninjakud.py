@@ -5,7 +5,8 @@ from pathlib import Path
 
 sys.path.insert(0, "/opt/ninjaku")
 
-from lib.db import init_db, connect
+from lib.db import connect
+from lib.schema_init import initialize_schema
 from lib.settings import get_bool
 from lib.modules import execute
 
@@ -92,7 +93,7 @@ def discover_devices(force=False):
         return {"ok": False, "error": str(e)}
 
 def main():
-    init_db()
+    initialize_schema()
     log("daemon_start", "ninjakud started")
 
     restore_state()

@@ -55,8 +55,6 @@ def reload_dnsmasq(reason="reload"):
     }
 
 def build_config():
-    ensure_defaults()
-
     return f"""\
 # Ninjaku OS Router LAN DHCP
 # DHCP only. DNS is handled by AdGuard Home.
@@ -75,7 +73,7 @@ server={cfg("dhcp.upstream2")}
 """
 
 def status():
-    ensure_defaults()
+    # Read-only path.
     return {
         "service": run(["systemctl", "is-active", "dnsmasq"])["stdout"],
         "enabled": run(["systemctl", "is-enabled", "dnsmasq"])["stdout"],

@@ -3,7 +3,10 @@ import sys
 sys.path.insert(0, "/opt/ninjaku")
 
 from flask import Flask, send_from_directory
+from lib.schema_init import initialize_schema
 from api.common import ok, APP_NAME, APP_VERSION, API_VERSION
+
+initialize_schema()
 
 from api.routes_system import system_bp, ENDPOINTS as SYSTEM_ENDPOINTS
 from api.routes_network import network_bp, ENDPOINTS as NETWORK_ENDPOINTS

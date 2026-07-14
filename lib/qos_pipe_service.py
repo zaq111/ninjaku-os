@@ -36,7 +36,7 @@ def ensure_table():
             """, (pid, name, down, up, prio, desc))
 
 def list_pipes():
-    ensure_table()
+    # Read-only path.
     with connect() as db:
         rows = db.execute("""
             SELECT id, name, download, upload, priority, engine, diffserv,
@@ -65,7 +65,7 @@ def list_pipes():
     } for r in rows]
 
 def get_pipe(pipe_id):
-    ensure_table()
+    # Read-only path.
     for p in list_pipes():
         if p["id"] == pipe_id:
             return p

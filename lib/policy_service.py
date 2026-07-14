@@ -91,8 +91,7 @@ def sync_profiles_to_policies():
 
 
 def list_policies():
-    ensure_table()
-
+    # Read-only path.
     from lib.profiles_service import list_profiles
 
     profiles = list_profiles()

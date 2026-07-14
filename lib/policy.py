@@ -36,8 +36,7 @@ def ensure_profile_policy_columns():
 def resolve(mac=None, profile=None):
     selected_profile = profile or "default"
 
-    ensure_profile_policy_columns()
-
+    # Read-only path. Profile schema migration runs during process startup.
     with connect() as db:
         if mac and not profile:
             row = db.execute(

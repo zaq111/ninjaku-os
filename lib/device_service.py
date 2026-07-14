@@ -245,7 +245,7 @@ def last_seen_age_label(last_seen):
 
 
 def list_devices():
-    ensure_schema()
+    # Read-only path. Schema migration belongs to init/write paths.
     with connect() as db:
         cur = db.execute("""
             SELECT mac, ip, hostname, alias, notes, profile, last_seen, seen_count, status

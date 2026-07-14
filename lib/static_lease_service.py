@@ -19,7 +19,7 @@ def ensure_table():
         """)
 
 def list_leases():
-    ensure_table()
+    # Read-only path.
     with connect() as db:
         rows = db.execute("""
             SELECT mac, ip, hostname, enabled, created_at, updated_at
@@ -75,14 +75,17 @@ def delete_lease(mac):
 
     return {"ok": deleted > 0, "mac": mac, "deleted": deleted}
 
-def build_config():
+def build_config(leases=None):
+    if leases is None:
+        leases = list_leases()
+
     lines = [
         "# Ninjaku OS Router static DHCP leases",
         "# Generated automatically. Do not edit manually.",
         "",
     ]
 
-    for lease in list_leases():
+    for lease in leases:
         if not lease["enabled"]:
             continue
 
@@ -116,7 +119,8 @@ def apply():
     }
 
 def status():
+    leases = list_leases()
     return {
-        "leases": list_leases(),
-        "config": build_config(),
+        "leases": leases,
+        "config": build_config(leases),
     }

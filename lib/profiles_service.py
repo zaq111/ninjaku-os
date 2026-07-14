@@ -55,8 +55,7 @@ def ensure_table():
             )
 
 def list_profiles():
-    ensure_table()
-
+    # Read-only path.
     with connect() as db:
         cur = db.execute("""
             SELECT name, description, is_system, qos_enabled, qos_download, qos_upload, qos_priority
