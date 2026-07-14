@@ -1,5 +1,6 @@
 import sqlite3
 from pathlib import Path
+from contextlib import contextmanager
 
 DB_PATH = Path("/var/lib/ninjaku/ninjaku.db")
 
@@ -31,13 +32,21 @@ CREATE TABLE IF NOT EXISTS devices (
 );
 """
 
+@contextmanager
 def connect():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)
 
     db = sqlite3.connect(DB_PATH, timeout=30)
-    db.execute("PRAGMA busy_timeout=30000")
-    db.execute("PRAGMA foreign_keys=ON")
-    return db
+    try:
+        db.execute("PRAGMA busy_timeout=30000")
+        db.execute("PRAGMA foreign_keys=ON")
+        yield db
+        db.commit()
+    except Exception:
+        db.rollback()
+        raise
+    finally:
+        db.close()
 
 def init_db():
     DB_PATH.parent.mkdir(parents=True, exist_ok=True)

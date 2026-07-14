@@ -338,9 +338,9 @@ def set_config(values):
 
     return {"ok": True, "changed": changed, "config": cfg()}
 
-def qos_runtime_state(c=None):
+def qos_runtime_state(c=None, limits=None):
     c = c or cfg()
-    limits = profile_limit_rules()
+    limits = profile_limit_rules() if limits is None else limits
     qos_on = str(c.get("enabled", "false")).lower() == "true"
     limiter_on = qos_on and len(limits) > 0
 
@@ -363,17 +363,18 @@ def status():
     c = cfg()
     wan = c["wan"]
     ifb = c["ifb"]
+    limits = profile_limit_rules()
 
     return {
         "config": c,
-        "runtime": qos_runtime_state(c),
+        "runtime": qos_runtime_state(c, limits),
         "enabled": c.get("enabled", "false"),
         "wan_exists": iface_exists(wan),
         "wan_qdisc": run(["tc", "-s", "qdisc", "show", "dev", wan])["stdout"],
         "ifb_qdisc": run(["tc", "-s", "qdisc", "show", "dev", ifb])["stdout"] if iface_exists(ifb) else "",
         "profile_rules": profile_dscp_rules(),
         "global_marking_rules": global_marking_rules(),
-        "profile_limit_rules": profile_limit_rules(),
+        "profile_limit_rules": limits,
         "wifi_limit_qdisc": run(["tc", "-s", "qdisc", "show", "dev", limiter_interfaces()[0]])["stdout"] if iface_exists(limiter_interfaces()[0]) else "",
         "wifi_ifb_qdisc": run(["tc", "-s", "qdisc", "show", "dev", limiter_interfaces()[1]])["stdout"] if iface_exists(limiter_interfaces()[1]) else "",
         "queue_runtime": qos_queue_runtime() if boolv(c.get("runtime_monitor", "false")) else {
